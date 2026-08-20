@@ -1,0 +1,239 @@
+[
+  {
+    "id": 1,
+    "title": "Maari",
+    "year": 2015,
+    "rating": 6.0,
+    "language": "Tamil",
+    "genres": ["Action", "Comedy"],
+    "runtime": "2h 18m",
+    "overview": "A feared local rowdy, known for his dominance in the streets and pigeon racing, finds himself at odds with a newly appointed police officer. As tensions rise, hidden motives and betrayals unfold, shaking the balance of power in the neighborhood.",
+    "tagline": "The most wanted rowdy is back",
+    "director": "Balaji Mohan",
+    "poster": "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "bk5lKWDVJAI",
+    "cast": [
+      { "name": "Dhanush", "role": "Maari", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Kajal Aggarwal", "role": "Sridevi", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Robo Shankar", "role": "Kader", "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Vijay Yesudas", "role": "ACP", "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Kalaiyarasan", "role": "Sub-Inspector", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "M. S. Bhaskar", "role": "Vetri", "photo": "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" },
+      { "name": "Netflix", "logo": "N", "color": "#E50914" }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Vikram",
+    "year": 2022,
+    "rating": 8.4,
+    "language": "Tamil",
+    "genres": ["Action", "Thriller"],
+    "runtime": "2h 55m",
+    "overview": "A special agent is tasked with finding the person responsible for a series of masked vigilante murders. The investigation uncovers a dark conspiracy involving a powerful drug cartel.",
+    "tagline": "One mission. One truth.",
+    "director": "Lokesh Kanagaraj",
+    "poster": "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "OKBMCL-0BVU",
+    "cast": [
+      { "name": "Kamal Haasan", "role": "Vikram", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Fahadh Faasil", "role": "Amar", "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Vijay Sethupathi", "role": "Santhanam", "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Suriya", "role": "Rolex", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Disney+ Hotstar", "logo": "✦", "color": "#0A3CA8" }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "KGF Chapter 2",
+    "year": 2022,
+    "rating": 8.2,
+    "language": "Kannada",
+    "genres": ["Action", "Drama"],
+    "runtime": "2h 48m",
+    "overview": "Rocky's bloodthirsty rage has caught the eye of Adheera, a fierce warrior from the Kolar Gold Fields' past. Meanwhile, the government wants him dead.",
+    "tagline": "The most powerful empire rises.",
+    "director": "Prashanth Neel",
+    "poster": "https://images.unsplash.com/photo-1611174777809-c8dcea724bb7?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "xnvLkHMmIKo",
+    "cast": [
+      { "name": "Yash", "role": "Rocky", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Sanjay Dutt", "role": "Adheera", "photo": "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Raveena Tandon", "role": "Ramika Sen", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" }
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Pushpa: The Rise",
+    "year": 2021,
+    "rating": 7.6,
+    "language": "Telugu",
+    "genres": ["Action", "Drama", "Crime"],
+    "runtime": "2h 59m",
+    "overview": "Pushpa Raj, a truck driver, rises through the ranks of red sandalwood smuggling syndicate while being chased by a relentless cop.",
+    "tagline": "Thaggede Le.",
+    "director": "Sukumar",
+    "poster": "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1518929458119-e5bf444c30f4?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "Q1NKMPhP8PY",
+    "cast": [
+      { "name": "Allu Arjun", "role": "Pushpa Raj", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Rashmika Mandanna", "role": "Srivalli", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Fahadh Faasil", "role": "SP Bhanwar Singh", "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" },
+      { "name": "Netflix", "logo": "N", "color": "#E50914" }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "RRR",
+    "year": 2022,
+    "rating": 7.9,
+    "language": "Telugu",
+    "genres": ["Action", "Drama", "History"],
+    "runtime": "3h 7m",
+    "overview": "A fictional story about two legendary revolutionaries and their journey away from home before they started fighting for their country in the 1920s.",
+    "tagline": "Rise. Roar. Revolt.",
+    "director": "S. S. Rajamouli",
+    "poster": "https://images.unsplash.com/photo-1543622748-5ee7237e8565?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1518929458119-e5bf444c30f4?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "f_AczdmmkqA",
+    "cast": [
+      { "name": "N. T. Rama Rao Jr.", "role": "Komaram Bheem", "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Ram Charan", "role": "A. Rama Raju", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Alia Bhatt", "role": "Sita", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Netflix", "logo": "N", "color": "#E50914" }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Master",
+    "year": 2021,
+    "rating": 7.8,
+    "language": "Tamil",
+    "genres": ["Action", "Thriller"],
+    "runtime": "2h 59m",
+    "overview": "An alcoholic professor is sent to a juvenile school where he must confront a dangerous gangster using the students as tools for his crimes.",
+    "tagline": "Thalapathy is here.",
+    "director": "Lokesh Kanagaraj",
+    "poster": "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "Pc9S-yvB4uo",
+    "cast": [
+      { "name": "Vijay", "role": "JD", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Vijay Sethupathi", "role": "Bhavani", "photo": "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Malavika Mohanan", "role": "Charulatha", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" }
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Bahubali: The Beginning",
+    "year": 2015,
+    "rating": 8.0,
+    "language": "Telugu",
+    "genres": ["Action", "Drama", "Fantasy"],
+    "runtime": "2h 39m",
+    "overview": "A young man raised by jungle tribes discovers his true royal heritage and fights to reclaim his kingdom from the cruel uncle who usurped the throne.",
+    "tagline": "The Beginning of an Epic.",
+    "director": "S. S. Rajamouli",
+    "poster": "https://images.unsplash.com/photo-1611174777809-c8dcea724bb7?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "x2CzVNF2sTU",
+    "cast": [
+      { "name": "Prabhas", "role": "Bahubali", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Rana Daggubati", "role": "Bhallaladeva", "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Anushka Shetty", "role": "Devasena", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Netflix", "logo": "N", "color": "#E50914" },
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" }
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Kabali",
+    "year": 2016,
+    "rating": 5.9,
+    "language": "Tamil",
+    "genres": ["Action", "Drama"],
+    "runtime": "2h 35m",
+    "overview": "An aging gangster from Malaysia leads a civil rights movement for Tamil workers while searching for his missing wife and daughter.",
+    "tagline": "The Don is back.",
+    "director": "Pa. Ranjith",
+    "poster": "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "YRqaAjyITQo",
+    "cast": [
+      { "name": "Rajinikanth", "role": "Kabali", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Radhika Apte", "role": "Yogi", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Dhansika", "role": "Kumari", "photo": "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Netflix", "logo": "N", "color": "#E50914" }
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Leo",
+    "year": 2023,
+    "rating": 7.4,
+    "language": "Tamil",
+    "genres": ["Action", "Thriller", "Crime"],
+    "runtime": "2h 44m",
+    "overview": "A mild-mannered café owner becomes a local hero through an act of violence, which sets off a chain of events that connects him to a dangerous drug cartel from his past.",
+    "tagline": "Bloody Sweet.",
+    "director": "Lokesh Kanagaraj",
+    "poster": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "Po3jStA673E",
+    "cast": [
+      { "name": "Vijay", "role": "Parthiban / Leo Das", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Trisha Krishnan", "role": "Sathya", "photo": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Sanjay Dutt", "role": "Antony Das", "photo": "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Netflix", "logo": "N", "color": "#E50914" }
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Jailer",
+    "year": 2023,
+    "rating": 7.3,
+    "language": "Tamil",
+    "genres": ["Action", "Comedy", "Crime"],
+    "runtime": "2h 48m",
+    "overview": "A retired jailer goes on a manhunt to find his son's killers and uncovers a massive idol smuggling network spanning across the country.",
+    "tagline": "Tiger Ka Hukum.",
+    "director": "Nelson Dilipkumar",
+    "poster": "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=600&fit=crop&auto=format",
+    "backdrop": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1400&h=600&fit=crop&auto=format",
+    "trailerId": "Y5BeWdODPqo",
+    "cast": [
+      { "name": "Rajinikanth", "role": "Muthuvel Pandian", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Mohanlal", "role": "Mathew", "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
+      { "name": "Shiva Rajkumar", "role": "Narasimha", "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" }
+    ],
+    "streaming": [
+      { "name": "Amazon Prime", "logo": "▶", "color": "#00A8E1" }
+    ]
+  }
+]

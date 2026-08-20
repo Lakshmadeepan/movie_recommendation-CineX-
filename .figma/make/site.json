@@ -1,5 +1,6 @@
 {
-  "description": "Allows users to view images alongside related trailers, enhancing media engagement by seamlessly combining visual content with video previews.",
+  "title": "CineX - Movie Recommendation App",
+  "description": "CineX is a premium movie discovery and recommendation platform. Find, explore, and enjoy cinema from around the world.",
   "robots": {
     "index": false
   },

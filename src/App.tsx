@@ -1,202 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface Movie {
-  id: number;
-  title: string;
-  year: number;
-  rating: number;
-  language: string;
-  genres: string[];
-  runtime: string;
-  overview: string;
-  tagline: string;
-  director: string;
-  poster: string;
-  backdrop: string;
-  trailerId: string;
-  cast: { name: string; role: string; photo: string }[];
-  streaming: { name: string; logo: string; color: string }[];
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOVIES: Movie[] = [
-  {
-    id: 1,
-    title: "Maari",
-    year: 2015,
-    rating: 6.0,
-    language: "Tamil",
-    genres: ["Action", "Comedy"],
-    runtime: "2h 18m",
-    overview: "A feared local rowdy, known for his dominance in the streets and pigeon racing, finds himself at odds with a newly appointed police officer. As tensions rise, hidden motives and betrayals unfold, shaking the balance of power in the neighborhood.",
-    tagline: "The most wanted rowdy is back",
-    director: "Balaji Mohan",
-    poster: "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "bk5lKWDVJAI",
-    cast: [
-      { name: "Dhanush", role: "Maari", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Kajal Aggarwal", role: "Sridevi", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-      { name: "Robo Shankar", role: "Kader", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Vijay Yesudas", role: "ACP", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Kalaiyarasan", role: "Sub-Inspector", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
-      { name: "M. S. Bhaskar", role: "Vetri", photo: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [
-      { name: "Amazon Prime", logo: "▶", color: "#00A8E1" },
-      { name: "Netflix", logo: "N", color: "#E50914" },
-    ],
-  },
-  {
-    id: 2,
-    title: "Vikram",
-    year: 2022,
-    rating: 8.4,
-    language: "Tamil",
-    genres: ["Action", "Thriller"],
-    runtime: "2h 55m",
-    overview: "A special agent is tasked with finding the person responsible for a series of masked vigilante murders. The investigation uncovers a dark conspiracy involving a powerful drug cartel.",
-    tagline: "One mission. One truth.",
-    director: "Lokesh Kanagaraj",
-    poster: "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "OKBMCL-0BVU",
-    cast: [
-      { name: "Kamal Haasan", role: "Vikram", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Fahadh Faasil", role: "Amar", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Vijay Sethupathi", role: "Santhanam", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Suriya", role: "Rolex", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Disney+ Hotstar", logo: "✦", color: "#0A3CA8" }],
-  },
-  {
-    id: 3,
-    title: "KGF Chapter 2",
-    year: 2022,
-    rating: 8.2,
-    language: "Kannada",
-    genres: ["Action", "Drama"],
-    runtime: "2h 48m",
-    overview: "Rocky's bloodthirsty rage has caught the eye of Adheera, a fierce warrior from the Kolar Gold Fields' past. Meanwhile, the government wants him dead.",
-    tagline: "The most powerful empire rises.",
-    director: "Prashanth Neel",
-    poster: "https://images.unsplash.com/photo-1611174777809-c8dcea724bb7?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "xnvLkHMmIKo",
-    cast: [
-      { name: "Yash", role: "Rocky", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Sanjay Dutt", role: "Adheera", photo: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" },
-      { name: "Raveena Tandon", role: "Ramika Sen", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Amazon Prime", logo: "▶", color: "#00A8E1" }],
-  },
-  {
-    id: 4,
-    title: "Pushpa: The Rise",
-    year: 2021,
-    rating: 7.6,
-    language: "Telugu",
-    genres: ["Action", "Drama", "Crime"],
-    runtime: "2h 59m",
-    overview: "Pushpa Raj, a truck driver, rises through the ranks of red sandalwood smuggling syndicate while being chased by a relentless cop.",
-    tagline: "Thaggede Le.",
-    director: "Sukumar",
-    poster: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1518929458119-e5bf444c30f4?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "Q1NKMPhP8PY",
-    cast: [
-      { name: "Allu Arjun", role: "Pushpa Raj", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Rashmika Mandanna", role: "Srivalli", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-      { name: "Fahadh Faasil", role: "SP Bhanwar Singh", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Amazon Prime", logo: "▶", color: "#00A8E1" }, { name: "Netflix", logo: "N", color: "#E50914" }],
-  },
-  {
-    id: 5,
-    title: "RRR",
-    year: 2022,
-    rating: 7.9,
-    language: "Telugu",
-    genres: ["Action", "Drama", "History"],
-    runtime: "3h 7m",
-    overview: "A fictional story about two legendary revolutionaries and their journey away from home before they started fighting for their country in the 1920s.",
-    tagline: "Rise. Roar. Revolt.",
-    director: "S. S. Rajamouli",
-    poster: "https://images.unsplash.com/photo-1543622748-5ee7237e8565?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1518929458119-e5bf444c30f4?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "f_AczdmmkqA",
-    cast: [
-      { name: "N. T. Rama Rao Jr.", role: "Komaram Bheem", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Ram Charan", role: "A. Rama Raju", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Alia Bhatt", role: "Sita", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Netflix", logo: "N", color: "#E50914" }],
-  },
-  {
-    id: 6,
-    title: "Master",
-    year: 2021,
-    rating: 7.8,
-    language: "Tamil",
-    genres: ["Action", "Thriller"],
-    runtime: "2h 59m",
-    overview: "An alcoholic professor is sent to a juvenile school where he must confront a dangerous gangster using the students as tools for his crimes.",
-    tagline: "Thalapathy is here.",
-    director: "Lokesh Kanagaraj",
-    poster: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "Pc9S-yvB4uo",
-    cast: [
-      { name: "Vijay", role: "JD", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Vijay Sethupathi", role: "Bhavani", photo: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&auto=format" },
-      { name: "Malavika Mohanan", role: "Charulatha", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Amazon Prime", logo: "▶", color: "#00A8E1" }],
-  },
-  {
-    id: 7,
-    title: "Bahubali: The Beginning",
-    year: 2015,
-    rating: 8.0,
-    language: "Telugu",
-    genres: ["Action", "Drama", "Fantasy"],
-    runtime: "2h 39m",
-    overview: "A young man raised by jungle tribes discovers his true royal heritage and fights to reclaim his kingdom from the cruel uncle who usurped the throne.",
-    tagline: "The Beginning of an Epic.",
-    director: "S. S. Rajamouli",
-    poster: "https://images.unsplash.com/photo-1611174777809-c8dcea724bb7?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "x2CzVNF2sTU",
-    cast: [
-      { name: "Prabhas", role: "Bahubali", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Rana Daggubati", role: "Bhallaladeva", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format" },
-      { name: "Anushka Shetty", role: "Devasena", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Netflix", logo: "N", color: "#E50914" }, { name: "Amazon Prime", logo: "▶", color: "#00A8E1" }],
-  },
-  {
-    id: 8,
-    title: "Kabali",
-    year: 2016,
-    rating: 5.9,
-    language: "Tamil",
-    genres: ["Action", "Drama"],
-    runtime: "2h 35m",
-    overview: "An aging gangster from Malaysia leads a civil rights movement for Tamil workers while searching for his missing wife and daughter.",
-    tagline: "The Don is back.",
-    director: "Pa. Ranjith",
-    poster: "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop&auto=format",
-    backdrop: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&h=600&fit=crop&auto=format",
-    trailerId: "YRqaAjyITQo",
-    cast: [
-      { name: "Rajinikanth", role: "Kabali", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format" },
-      { name: "Radhika Apte", role: "Yogi", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format" },
-      { name: "Dhansika", role: "Kumari", photo: "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=200&h=200&fit=crop&auto=format" },
-    ],
-    streaming: [{ name: "Netflix", logo: "N", color: "#E50914" }],
-  },
-];
+import {
+  type Movie,
+  FALLBACK_MOVIES,
+  getTrendingMovies,
+  getTopRatedMovies,
+  getTamilMovies,
+  getRecommendations,
+  searchMovies,
+} from "./services/api";
 
 const GENRES = ["Action", "Comedy", "Thriller", "Romance", "Sci-Fi", "Drama", "Crime", "Fantasy", "History"];
 const LANGUAGES = ["Tamil", "Telugu", "Malayalam", "Hindi", "Kannada", "English"];
@@ -280,19 +91,6 @@ function MovieGridCard({ movie, onClick }: { movie: Movie; onClick: () => void }
         <p className="text-xs font-medium text-amber-600 mt-1.5">{movie.language}</p>
       </div>
     </button>
-  );
-}
-
-// ─── Skeleton Loader ──────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div className="flex-shrink-0 w-40 md:w-44 rounded-xl overflow-hidden bg-white shadow-sm border border-stone-100 animate-pulse">
-      <div className="bg-stone-200" style={{ paddingBottom: "150%" }} />
-      <div className="p-2.5 space-y-1.5">
-        <div className="h-3 bg-stone-200 rounded w-3/4" />
-        <div className="h-2.5 bg-stone-100 rounded w-1/2" />
-      </div>
-    </div>
   );
 }
 
@@ -443,18 +241,25 @@ function TrailerModal({ trailerId, title, onClose }: { trailerId: string; title:
 // ─── Home Page ────────────────────────────────────────────────────────────────
 function HomePage({ onSearch, onSelect }: { onSearch: (q: string) => void; onSelect: (m: Movie) => void }) {
   const [query, setQuery] = useState("");
-  const heroMovies = MOVIES.slice(0, 3);
+  const [trending, setTrending] = useState<Movie[]>(FALLBACK_MOVIES.slice(0, 8));
+  const [popular, setPopular] = useState<Movie[]>(FALLBACK_MOVIES);
+  const [tamil, setTamil] = useState<Movie[]>(FALLBACK_MOVIES.filter(m => m.language === "Tamil"));
   const [heroIdx, setHeroIdx] = useState(0);
-  const hero = heroMovies[heroIdx];
+
+  const heroMovies = trending.slice(0, 3);
+  const hero = heroMovies[heroIdx] || FALLBACK_MOVIES[0];
 
   useEffect(() => {
-    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroMovies.length), 6000);
-    return () => clearInterval(t);
+    getTrendingMovies().then(setTrending);
+    getTopRatedMovies().then(setPopular);
+    getTamilMovies().then(setTamil);
   }, []);
 
-  const trending = MOVIES;
-  const popular = [...MOVIES].sort((a, b) => b.rating - a.rating);
-  const tamil = MOVIES.filter(m => m.language === "Tamil");
+  useEffect(() => {
+    if (heroMovies.length <= 1) return;
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroMovies.length), 6000);
+    return () => clearInterval(t);
+  }, [heroMovies.length]);
 
   return (
     <div>
@@ -484,12 +289,14 @@ function HomePage({ onSearch, onSelect }: { onSearch: (q: string) => void; onSel
           </form>
 
           {/* Hero indicators */}
-          <div className="flex gap-2 mt-5">
-            {heroMovies.map((_, i) => (
-              <button key={i} onClick={() => setHeroIdx(i)}
-                className={`h-1 rounded-full transition-all ${i === heroIdx ? "w-8 bg-amber-400" : "w-3 bg-white/40 hover:bg-white/60"}`} />
-            ))}
-          </div>
+          {heroMovies.length > 1 && (
+            <div className="flex gap-2 mt-5">
+              {heroMovies.map((_, i) => (
+                <button key={i} onClick={() => setHeroIdx(i)}
+                  className={`h-1 rounded-full transition-all ${i === heroIdx ? "w-8 bg-amber-400" : "w-3 bg-white/40 hover:bg-white/60"}`} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* View details btn */}
@@ -528,16 +335,20 @@ function HomePage({ onSearch, onSelect }: { onSearch: (q: string) => void; onSel
 function SearchResults({ query, onSelect, onBack }: { query: string; onSelect: (m: Movie) => void; onBack: () => void }) {
   const [localQuery, setLocalQuery] = useState(query);
   const [activeQuery, setActiveQuery] = useState(query);
+  const [results, setResults] = useState<Movie[]>(FALLBACK_MOVIES);
+  const [loading, setLoading] = useState(false);
 
-  const results = activeQuery
-    ? MOVIES.filter(m =>
-      m.title.toLowerCase().includes(activeQuery.toLowerCase()) ||
-      m.language.toLowerCase().includes(activeQuery.toLowerCase()) ||
-      m.genres.some(g => g.toLowerCase().includes(activeQuery.toLowerCase())) ||
-      m.director.toLowerCase().includes(activeQuery.toLowerCase()) ||
-      m.cast.some(c => c.name.toLowerCase().includes(activeQuery.toLowerCase()))
-    )
-    : MOVIES;
+  useEffect(() => {
+    setLocalQuery(query);
+    setActiveQuery(query);
+  }, [query]);
+
+  useEffect(() => {
+    setLoading(true);
+    searchMovies(activeQuery)
+      .then(setResults)
+      .finally(() => setLoading(false));
+  }, [activeQuery]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
@@ -559,7 +370,19 @@ function SearchResults({ query, onSelect, onBack }: { query: string; onSelect: (
         </p>
       </div>
 
-      {results.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-sm border border-stone-100 animate-pulse">
+              <div className="bg-stone-200" style={{ paddingBottom: "150%" }} />
+              <div className="p-2.5 space-y-1.5">
+                <div className="h-3 bg-stone-200 rounded w-3/4" />
+                <div className="h-2.5 bg-stone-100 rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : results.length === 0 ? (
         <div className="text-center py-20">
           <div className="text-5xl mb-4">🎬</div>
           <h3 className="font-display text-xl text-stone-600 mb-2">No movies found</h3>
@@ -578,11 +401,12 @@ function SearchResults({ query, onSelect, onBack }: { query: string; onSelect: (
 function MovieDetailsPage({ movie, onBack, onSelect }: { movie: Movie; onBack: () => void; onSelect: (m: Movie) => void }) {
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [tab, setTab] = useState<"overview" | "cast" | "media">("overview");
-
-  const recommended = MOVIES.filter(m =>
-    m.id !== movie.id && (m.language === movie.language || m.genres.some(g => movie.genres.includes(g)))
-  );
+  const [recommended, setRecommended] = useState<Movie[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getRecommendations(movie.id, 6).then(setRecommended);
+  }, [movie.id]);
 
   return (
     <div className="min-h-screen">
@@ -863,7 +687,7 @@ function Footer() {
           </div>
         </div>
         <div className="border-t border-stone-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-stone-500">© 2024 CineX. Built using TMDB API.</p>
+          <p className="text-xs text-stone-500">© 2024 CineX. Built using TMDB API & FastAPI Recommender.</p>
           <p className="text-xs text-stone-500">Developed by <a href="https://www.linkedin.com/in/lakshma-deepan-76bb2537a" target="_blank" rel="noopener noreferrer" className="text-amber-400 font-medium hover:text-amber-300 transition-colors">Lakshmadeepan</a> · Data from TMDB</p>
         </div>
       </div>
