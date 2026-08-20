@@ -1,0 +1,10 @@
+{
+  "description": "Allows users to view images alongside related trailers, enhancing media engagement by seamlessly combining visual content with video previews.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
