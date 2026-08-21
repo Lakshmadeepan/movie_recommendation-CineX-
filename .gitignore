@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 node_modules/
 dist/
 build/
@@ -5,10 +6,22 @@ build/
 .env*
 .vite/
 vite.config.*.timestamp-*
+=======
+# Node & Frontend Build
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.cache/
+.vite/
+>>>>>>> 12d9995 (feat: CineX ML movie recommendation system with TMDB trailer modal, reviews, and watchlists)
 *.tsbuildinfo
 *-debug.log*
 logs/
 *.log
+<<<<<<< HEAD
 .claude-replay.*
 .tmp-*
 
@@ -28,4 +41,44 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+=======
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python & Virtual Environments
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+**/venv/
+**/.venv/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.figma/
+**/.figma/
+.mise.toml
+.tmp-*
+.claude-replay.*
+/.plugins/
+/.opencode-skills/
+>>>>>>> 12d9995 (feat: CineX ML movie recommendation system with TMDB trailer modal, reviews, and watchlists)
 
