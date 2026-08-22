@@ -249,7 +249,11 @@ export const FALLBACK_MOVIES: Movie[] = [
   },
 ];
 
-const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL || "").trim();
+const RAW_API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "https://movie-recommendation-cinex.onrender.com"
+).trim();
 const API_BASE = RAW_API_BASE ? `${RAW_API_BASE.replace(/\/+$/, "")}/api` : "/api";
 
 async function fetchJson<T>(url: string, fallback: T): Promise<T> {

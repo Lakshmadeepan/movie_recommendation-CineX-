@@ -99,7 +99,7 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
 // Read API Key from Vite Environment
-const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "";
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "f3b2275b26f4c53d086fb7614cbc2526";
 
 const GENRE_MAP: Record<number, string> = {
   28: "Action",
