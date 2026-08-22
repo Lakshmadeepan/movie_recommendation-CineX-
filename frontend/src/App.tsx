@@ -48,14 +48,16 @@ const SAMPLE_COMMUNITY_COMMENTS: Record<string, Omit<UserComment, "id" | "movieI
 
 // ─── Rating Circle ────────────────────────────────────────────────────────────
 function RatingCircle({ rating, size = "md" }: { rating: number; size?: "sm" | "md" | "lg" }) {
-  const pct = Math.round((rating / 10) * 100);
-  const color = rating >= 7 ? "#22C55E" : rating >= 5 ? "#F59E0B" : "#EF4444";
+  const safeRating = typeof rating === "number" && !isNaN(rating) && rating > 0 ? rating : 0;
+  const pct = Math.round((safeRating / 10) * 100);
+  const color = safeRating >= 7 ? "#22C55E" : safeRating >= 5 ? "#F59E0B" : safeRating > 0 ? "#EF4444" : "#57534E";
   const dims = size === "lg" ? 64 : size === "md" ? 46 : 34;
   const stroke = size === "lg" ? 4.5 : 3;
   const r = (dims - stroke * 2) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
-  const fontSize = size === "lg" ? "text-sm font-bold" : size === "md" ? "text-xs font-bold" : "text-[9px] font-bold";
+  const dash = safeRating > 0 ? (pct / 100) * circ : 0;
+  const fontSize = size === "lg" ? "text-xs font-bold" : size === "md" ? "text-[10px] font-bold" : "text-[8px] font-bold";
+  const displayText = safeRating > 0 ? safeRating.toFixed(1) : "—";
 
   return (
     <div className="relative inline-flex items-center justify-center bg-[#0D1117] rounded-full shadow-md flex-shrink-0" style={{ width: dims, height: dims }}>
@@ -64,7 +66,7 @@ function RatingCircle({ rating, size = "md" }: { rating: number; size?: "sm" | "
         <circle cx={dims / 2} cy={dims / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" />
       </svg>
-      <span className={`${fontSize} text-white z-10 font-mono-data`}>{pct}<span style={{ fontSize: "0.6em" }}>%</span></span>
+      <span className={`${fontSize} text-white z-10 font-mono-data`}>{displayText}</span>
     </div>
   );
 }
@@ -1522,8 +1524,13 @@ function MovieDetailsPage({
               <div className="flex items-center gap-2.5">
                 <RatingCircle rating={fullMovie.rating} size="lg" />
                 <div>
-                  <p className="text-white font-semibold text-xs sm:text-sm">IMDb Score</p>
-                  <p className="text-stone-400 text-[10px] sm:text-xs font-mono-data">{Math.round(fullMovie.rating * 10)}% satisfaction</p>
+                  <p className="text-white font-semibold text-xs sm:text-sm">
+                    {fullMovie.rating_source === "IMDb" ? "IMDb Rating" : "TMDB Rating"}
+                  </p>
+                  <p className="text-amber-400 text-xs sm:text-sm font-bold font-mono-data flex items-center gap-1">
+                    <span>★</span>
+                    <span>{fullMovie.rating && fullMovie.rating > 0 ? `${fullMovie.rating.toFixed(1)} / 10` : "Not Rated"}</span>
+                  </p>
                 </div>
               </div>
 

@@ -25,6 +25,7 @@ export interface Movie {
   backdrop: string;
   trailerId: string;
   cast: CastMember[];
+  rating_source?: string;
   streaming: StreamingPlatform[];
 }
 
@@ -248,7 +249,8 @@ export const FALLBACK_MOVIES: Movie[] = [
   },
 ];
 
-const API_BASE = "/api";
+const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL || "").trim();
+const API_BASE = RAW_API_BASE ? `${RAW_API_BASE.replace(/\/+$/, "")}/api` : "/api";
 
 async function fetchJson<T>(url: string, fallback: T): Promise<T> {
   try {

@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      allowedHosts: true,
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,

@@ -353,7 +353,8 @@ class TMDBService:
         tagline = data.get("tagline") or ""
         rel_date = data.get("release_date") or ""
         year = int(rel_date.split("-")[0]) if rel_date and "-" in rel_date and rel_date.split("-")[0].isdigit() else 0
-        rating = round(float(data.get("vote_average", 7.0)), 1)
+        vote_avg = float(data.get("vote_average", 0.0) or 0.0)
+        rating = round(vote_avg, 1) if vote_avg > 0 else (self._get_curated(title, "rating") or 7.0)
         votes = int(data.get("vote_count", 0))
         popularity = float(data.get("popularity", 10.0))
         runtime_mins = int(data.get("runtime", 120)) if data.get("runtime") else 120
@@ -431,7 +432,8 @@ class TMDBService:
             "overview": overview, "tagline": tagline, "director": director,
             "poster": poster, "backdrop": backdrop, "trailerId": trailer_id or "",
             "cast": cast, "budget_crores": 0.0, "revenue_crores": 0.0,
-            "popularity": popularity, "imdb_id": data.get("imdb_id") or "", "streaming": streaming,
+            "popularity": popularity, "imdb_id": data.get("imdb_id") or "",
+            "rating_source": "TMDB", "streaming": streaming,
         }
 
     def _get_curated(self, title: str, field: str) -> Optional[Any]:
@@ -465,10 +467,17 @@ class TMDBService:
 
         raw_id = movie.get("id") or movie.get("movie_id")
         tmdb_id: Optional[int] = None
-        if raw_id and str(raw_id).isdigit() and int(raw_id) < 1000000:
+        if movie.get("tmdb_id") and str(movie["tmdb_id"]).isdigit():
+            tmdb_id = int(movie["tmdb_id"])
+        elif movie.get("is_tmdb") and raw_id and str(raw_id).isdigit():
             tmdb_id = int(raw_id)
         else:
-            tmdb_id = self.find_tmdb_id(title=title, year=movie.get("year", 0), language=movie.get("language", "Tamil"))
+            # Resolve actual TMDB ID by movie title, year, and language
+            tmdb_id = self.find_tmdb_id(
+                title=title,
+                year=movie.get("year", 0),
+                language=movie.get("language", "")
+            )
 
         if tmdb_id:
             details = self.get_movie_details(tmdb_id)
@@ -476,7 +485,10 @@ class TMDBService:
                 enriched = dict(details)
                 if "similarity" in movie:
                     enriched["similarity"] = movie["similarity"]
+                if (not enriched.get("rating") or float(enriched.get("rating") or 0) <= 0) and movie.get("rating") and float(movie.get("rating") or 0) > 0:
+                    enriched["rating"] = round(float(movie["rating"]), 1)
                 enriched["local_id"] = movie.get("id")
+                enriched["rating_source"] = "TMDB"
                 return enriched
 
         fallback = dict(movie)
@@ -484,6 +496,9 @@ class TMDBService:
             for k in ["poster", "backdrop", "trailerId", "director", "year", "rating", "genres"]:
                 if k in curated and curated[k]:
                     fallback[k] = curated[k]
+        if not fallback.get("rating") or float(fallback.get("rating") or 0) <= 0:
+            fallback["rating"] = self._get_curated(title, "rating") or 7.0
+        fallback["rating_source"] = "IMDb" if movie.get("imdb_id") else "TMDB"
         if not fallback.get("poster") or not str(fallback["poster"]).startswith("http"):
             fallback["poster"] = self._get_curated(title, "poster") or _get_unique_poster(title)
         if not fallback.get("backdrop") or not str(fallback["backdrop"]).startswith("http"):
@@ -527,10 +542,96 @@ class TMDBService:
         return [self._fmt(m) for m in (data or {}).get("results", [])[:limit]] if data else []
 
     def search_tmdb(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
-        if not query.strip():
+        import difflib
+        q = query.strip()
+        if not q:
             return self.get_popular(limit)
-        data = self._get("/search/movie", {"query": query, "include_adult": "false"})
-        return [self._fmt(m) for m in (data or {}).get("results", [])[:limit]] if data else []
+
+        # 1. Primary search with user query
+        data = self._get("/search/movie", {"query": q, "include_adult": "false"})
+        results = (data or {}).get("results", [])
+
+        # 2. Spelling Relaxation: if initial query returns few/no results, try intelligent variants
+        if len(results) < 3:
+            q_lower = q.lower()
+            variants: List[str] = []
+
+            # De-duplicate repeated characters (e.g. vikramm -> vikram, maharajaa -> maharaja)
+            clean_v = re.sub(r"([a-z])\1+", r"\1", q_lower)
+            if clean_v != q_lower:
+                variants.append(clean_v)
+
+            # Phonetic / vowel adjustments (e.g. jai bheem -> jai bhim, vadachenai -> vada chennai)
+            v2 = q_lower.replace("ee", "i").replace("oo", "u").replace("ai", "ay").replace("aa", "a")
+            if v2 != q_lower and v2 not in variants:
+                variants.append(v2)
+
+            # Suffix variations (e.g. interstaller -> interstellar)
+            if q_lower.endswith("er"):
+                variants.append(q_lower[:-2] + "ar")
+                variants.append(q_lower[:-2] + "or")
+            elif q_lower.endswith("ar"):
+                variants.append(q_lower[:-2] + "er")
+
+            # Multi-word decomposition (e.g. 'vada chenai' -> search 'vada' and 'chennai')
+            words = [w for w in q_lower.split() if len(w) >= 4]
+            for w in words:
+                if w not in variants:
+                    variants.append(w)
+
+            # Prefix relaxation for typos at end of words (e.g. interstaller -> interst)
+            if len(q_lower) >= 7:
+                variants.append(q_lower[:7])
+                variants.append(q_lower[:6])
+                variants.append(q_lower[:5])
+            elif len(q_lower) >= 5:
+                variants.append(q_lower[:4])
+
+            seen_ids = {m["id"] for m in results if isinstance(m, dict) and "id" in m}
+            for var in variants:
+                v_data = self._get("/search/movie", {"query": var, "include_adult": "false"})
+                for item in (v_data or {}).get("results", []):
+                    if item.get("id") not in seen_ids:
+                        seen_ids.add(item.get("id"))
+                        results.append(item)
+                if len(results) >= 15:
+                    break
+
+        if not results:
+            return []
+
+        q_clean = re.sub(r"[^a-zA-Z0-9\s]", " ", q).strip().lower()
+
+        def score_tmdb_item(item: Dict[str, Any]) -> float:
+            m_title = re.sub(r"[^a-zA-Z0-9\s]", " ", item.get("title") or "").strip().lower()
+            m_orig = re.sub(r"[^a-zA-Z0-9\s]", " ", item.get("original_title") or "").strip().lower()
+            score = 0.0
+
+            if m_title == q_clean or m_orig == q_clean:
+                score += 1000.0
+            elif m_title.startswith(q_clean) or m_orig.startswith(q_clean):
+                score += 500.0
+            elif q_clean in m_title or q_clean in m_orig:
+                score += 300.0
+
+            ratio1 = difflib.SequenceMatcher(None, q_clean, m_title).ratio() if m_title else 0.0
+            ratio2 = difflib.SequenceMatcher(None, q_clean, m_orig).ratio() if m_orig else 0.0
+            max_ratio = max(ratio1, ratio2)
+
+            if max_ratio >= 0.85:
+                score += 450.0 * max_ratio
+            elif max_ratio >= 0.70:
+                score += 280.0 * max_ratio
+            elif max_ratio >= 0.55:
+                score += 120.0 * max_ratio
+
+            # Popularity / Rating tie breaker
+            score += float(item.get("vote_average", 0.0) or 0.0) * 0.5
+            score += float(item.get("popularity", 0.0) or 0.0) * 0.1
+            return score
+
+        results.sort(key=score_tmdb_item, reverse=True)
+        return [self._fmt(m) for m in results[:limit]]
 
     def _fmt(self, m: Dict[str, Any]) -> Dict[str, Any]:
         title = m.get("title") or m.get("original_title") or "Untitled"
@@ -543,16 +644,19 @@ class TMDBService:
         ol = m.get("original_language", "ta")
         lang_map = {"ta": "Tamil", "te": "Telugu", "ml": "Malayalam", "hi": "Hindi", "kn": "Kannada", "en": "English"}
 
+        vote_avg = float(m.get("vote_average", 0.0) or 0.0)
+        rating = round(vote_avg, 1) if vote_avg > 0 else (self._get_curated(title, "rating") or 7.0)
+
         return {
             "id": m.get("id", 0), "movie_id": m.get("id", 0), "tmdb_id": m.get("id", 0),
             "title": title, "year": year,
-            "rating": round(float(m.get("vote_average", 7.0)), 1), "votes": int(m.get("vote_count", 0)),
+            "rating": rating, "votes": int(m.get("vote_count", 0)),
             "language": lang_map.get(ol, ol.upper()), "genres": ["Drama"], "runtime": "2h 00m", "runtime_minutes": 120,
             "overview": m.get("overview") or f"{title} is a popular movie.", "tagline": "",
             "director": "Various", "poster": poster, "backdrop": backdrop,
             "trailerId": self._get_curated(title, "trailerId") or "", "cast": [],
             "budget_crores": 0.0, "revenue_crores": 0.0, "popularity": float(m.get("popularity", 10.0)),
-            "imdb_id": "", "streaming": [],
+            "imdb_id": "", "rating_source": "TMDB", "streaming": [],
         }
 
 

@@ -1,140 +1,3 @@
-<<<<<<< HEAD
-import json
-import os
-from typing import List, Dict, Any, Optional
-
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    from sklearn.neighbors import NearestNeighbors
-    import numpy as np
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-
-
-class MovieRecommender:
-    def __init__(self, data_path: str):
-        self.data_path = data_path
-        self.movies: List[Dict[str, Any]] = []
-        self.movie_map: Dict[int, Dict[str, Any]] = {}
-        self.indices_map: Dict[int, int] = {}
-        self.feature_matrix = None
-        self.knn_model = None
-        self.load_data()
-
-    def load_data(self):
-        if not os.path.exists(self.data_path):
-            return
-        with open(self.data_path, "r", encoding="utf-8") as f:
-            self.movies = json.load(f)
-        
-        self.movie_map = {m["id"]: m for m in self.movies}
-        self.indices_map = {m["id"]: idx for idx, m in enumerate(self.movies)}
-        self._fit_recommender()
-
-    def _fit_recommender(self):
-        if not self.movies:
-            return
-
-        # Prepare rich text representation for each movie (genres, director, cast, language, overview)
-        soup_features = []
-        for m in self.movies:
-            genres_str = " ".join(m.get("genres", []))
-            director_str = m.get("director", "")
-            cast_str = " ".join([c.get("name", "") for c in m.get("cast", [])])
-            lang_str = m.get("language", "")
-            overview_str = m.get("overview", "")
-            
-            # Weighted feature string
-            soup = f"{genres_str} {genres_str} {director_str} {cast_str} {lang_str} {overview_str}"
-            soup_features.append(soup)
-
-        if SKLEARN_AVAILABLE and len(soup_features) > 1:
-            try:
-                self.vectorizer = TfidfVectorizer(stop_words="english")
-                self.feature_matrix = self.vectorizer.fit_transform(soup_features)
-                
-                # KNN with cosine metric
-                n_neighbors = min(len(self.movies), 10)
-                self.knn_model = NearestNeighbors(n_neighbors=n_neighbors, metric="cosine")
-                self.knn_model.fit(self.feature_matrix)
-            except Exception as e:
-                print(f"Error training recommender: {e}")
-                self.knn_model = None
-
-    def get_recommendations(self, movie_id: int, top_n: int = 6) -> List[Dict[str, Any]]:
-        if movie_id not in self.indices_map:
-            return []
-
-        target_idx = self.indices_map[movie_id]
-        target_movie = self.movie_map[movie_id]
-
-        if self.knn_model is not None and self.feature_matrix is not None:
-            try:
-                distances, indices = self.knn_model.kneighbors(
-                    self.feature_matrix[target_idx], 
-                    n_neighbors=min(top_n + 1, len(self.movies))
-                )
-                recommended = []
-                for idx in indices[0]:
-                    rec_movie = self.movies[idx]
-                    if rec_movie["id"] != movie_id:
-                        recommended.append(rec_movie)
-                    if len(recommended) >= top_n:
-                        break
-                return recommended
-            except Exception:
-                pass
-
-        # Heuristic fallback (genre + language overlap)
-        scored = []
-        for m in self.movies:
-            if m["id"] == movie_id:
-                continue
-            score = 0
-            # Common genres
-            common_genres = set(m.get("genres", [])).intersection(set(target_movie.get("genres", [])))
-            score += len(common_genres) * 3
-            # Same language
-            if m.get("language") == target_movie.get("language"):
-                score += 2
-            # Same director
-            if m.get("director") == target_movie.get("director"):
-                score += 4
-            # Rating similarity
-            score += (10 - abs(m.get("rating", 0) - target_movie.get("rating", 0))) * 0.1
-            scored.append((score, m))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [item[1] for item in scored[:top_n]]
-
-    def search_movies(self, query: str) -> List[Dict[str, Any]]:
-        q = query.lower().strip()
-        if not q:
-            return self.movies
-
-        results = []
-        for m in self.movies:
-            title_match = q in m.get("title", "").lower()
-            lang_match = q in m.get("language", "").lower()
-            genre_match = any(q in g.lower() for g in m.get("genres", []))
-            director_match = q in m.get("director", "").lower()
-            cast_match = any(q in c.get("name", "").lower() for c in m.get("cast", []))
-
-            if title_match or lang_match or genre_match or director_match or cast_match:
-                results.append(m)
-
-        return results
-
-    def get_all(self, genre: Optional[str] = None, language: Optional[str] = None) -> List[Dict[str, Any]]:
-        filtered = self.movies
-        if genre:
-            filtered = [m for m in filtered if genre.lower() in [g.lower() for g in m.get("genres", [])]]
-        if language:
-            filtered = [m for m in filtered if m.get("language", "").lower() == language.lower()]
-        return filtered
-=======
 import os
 import re
 from typing import List, Dict, Any, Optional, Tuple, Union
@@ -396,7 +259,6 @@ class MovieRecommender:
             self.movie_map[str(movie_id)] = movie_record
             self.indices_map[movie_id] = int(idx)
             self.indices_map[str(movie_id)] = int(idx)
-            self.indices_map[int(idx)] = int(idx)
 
     # ========================================================
     # KNN MODEL TRAINING
@@ -416,8 +278,20 @@ class MovieRecommender:
         print("[MovieRecommender] KNN model fitted successfully.")
 
     # ========================================================
-    # MOVIE SEARCH / LOOKUP
+    # TEXT NORMALIZATION & CLEANING
     # ========================================================
+
+    @staticmethod
+    def clean_text(value: Any) -> str:
+        """
+        Clean and normalize text using the EXACT same rules as prepare_features.py.
+        """
+        if pd.isna(value) or value is None:
+            return ""
+        val = str(value).lower()
+        val = re.sub(r"[^a-z0-9\s]", " ", val)
+        val = re.sub(r"\s+", " ", val)
+        return val.strip()
 
     @staticmethod
     def normalize_text(text: Any) -> str:
@@ -428,41 +302,166 @@ class MovieRecommender:
         s = re.sub(r"\s+", " ", s)
         return s.strip()
 
-    def find_movie(self, movie_title: str) -> Optional[int]:
-        """Finds row index for a given movie title string."""
+    @staticmethod
+    def calculate_similarity_ratio(s1: str, s2: str) -> float:
+        """Calculate string similarity ratio using difflib SequenceMatcher."""
+        import difflib
+        if not s1 or not s2:
+            return 0.0
+        return difflib.SequenceMatcher(None, s1, s2).ratio()
+
+    # ========================================================
+    # MOVIE SEARCH / LOOKUP (SMART FUZZY MATCHING)
+    # ========================================================
+
+    def find_movie(self, movie_title: str, min_similarity: float = 0.70) -> Optional[int]:
+        """
+        Finds row index for a given movie title string with fuzzy spelling tolerance.
+        Priority:
+        1. Exact normalized title match
+        2. Starts-with match
+        3. Substring / words match
+        4. High-confidence fuzzy spelling match (e.g. 'vada chenai' -> 'Vada Chennai', 'vikramm' -> 'Vikram')
+        """
         query = self.normalize_text(movie_title)
         if not query:
             return None
 
         # 1. Exact normalized title match
         for idx, m in enumerate(self.movies):
-            if self.normalize_text(m["title"]) == query or self.normalize_text(m["raw_title"]) == query:
+            t_norm = self.normalize_text(m.get("title", ""))
+            raw_norm = self.normalize_text(m.get("raw_title", ""))
+            if t_norm == query or raw_norm == query:
                 return idx
 
         # 2. Starts-with match
         for idx, m in enumerate(self.movies):
-            t_norm = self.normalize_text(m["title"])
+            t_norm = self.normalize_text(m.get("title", ""))
             if t_norm.startswith(query):
                 return idx
 
         # 3. Substring / contains match
         for idx, m in enumerate(self.movies):
-            t_norm = self.normalize_text(m["title"])
-            if query in t_norm:
+            t_norm = self.normalize_text(m.get("title", ""))
+            if len(query) >= 4 and (query in t_norm or t_norm in query):
                 return idx
 
         # 4. Words match (all query words present in title)
         q_words = query.split()
+        if len(q_words) > 1:
+            for idx, m in enumerate(self.movies):
+                t_norm = self.normalize_text(m.get("title", ""))
+                if all(w in t_norm for w in q_words):
+                    return idx
+
+        # 5. Fuzzy spelling similarity match
+        best_idx: Optional[int] = None
+        best_ratio = 0.0
+
         for idx, m in enumerate(self.movies):
-            t_norm = self.normalize_text(m["title"])
-            if all(w in t_norm for w in q_words):
-                return idx
+            t_norm = self.normalize_text(m.get("title", ""))
+            if not t_norm:
+                continue
+
+            ratio = self.calculate_similarity_ratio(query, t_norm)
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_idx = idx
+
+        if best_idx is not None and best_ratio >= min_similarity:
+            return best_idx
 
         return None
 
     # ========================================================
-    # RECOMMENDATION ENGINE
+    # RECOMMENDATION ENGINE (KNN & DYNAMIC FALLBACK)
     # ========================================================
+
+    def _rank_and_filter_candidates(
+        self,
+        target_movie: Dict[str, Any],
+        distances: np.ndarray,
+        indices: np.ndarray,
+        top_n: int = 10,
+        min_threshold: float = 0.08
+    ) -> List[Dict[str, Any]]:
+        """
+        Ranks and filters KNN candidates with:
+        - True cosine similarity from TF-IDF representation
+        - Subtle director & cast affinity synergy
+        - Minimum quality/similarity threshold
+        - Strict self-exclusion
+        """
+        target_norm_title = self.normalize_text(target_movie.get("title", ""))
+        target_id_str = str(target_movie.get("id") or target_movie.get("movie_id") or "")
+        target_dir = str(target_movie.get("director", "")).strip().lower()
+        target_genres = set(
+            (g if isinstance(g, str) else g.get("name", "")).lower()
+            for g in target_movie.get("genres", [])
+        )
+
+        # Parse target cast
+        raw_t_cast = target_movie.get("cast", [])
+        if isinstance(raw_t_cast, list):
+            target_cast = set(
+                (c.get("name", "") if isinstance(c, dict) else str(c)).strip().lower()
+                for c in raw_t_cast[:6]
+                if (isinstance(c, dict) and c.get("name")) or (isinstance(c, str) and c)
+            )
+        elif isinstance(raw_t_cast, str):
+            target_cast = set(x.strip().lower() for x in raw_t_cast.split(",")[:6] if x.strip())
+        else:
+            target_cast = set()
+
+        seen_titles = {target_norm_title}
+        seen_ids = {target_id_str} if target_id_str else set()
+        scored_candidates: List[Dict[str, Any]] = []
+
+        for dist, idx in zip(distances[0], indices[0]):
+            candidate = self.movies[idx]
+            cand_id_str = str(candidate.get("id"))
+            cand_norm_title = self.normalize_text(candidate["title"])
+
+            # Never recommend target movie itself or duplicates
+            if cand_norm_title in seen_titles or (cand_id_str and cand_id_str in seen_ids):
+                continue
+
+            seen_titles.add(cand_norm_title)
+            if cand_id_str:
+                seen_ids.add(cand_id_str)
+
+            base_sim = float(max(0.0, 1.0 - dist))
+            score = base_sim
+
+            # 1. Director affinity (same director = strong stylistic and cinematic synergy)
+            cand_dir = str(candidate.get("director", "")).strip().lower()
+            if cand_dir and target_dir and cand_dir != "unknown director" and cand_dir != "nan" and cand_dir == target_dir:
+                score += 0.08
+
+            # 2. Cast collaboration affinity
+            raw_c_cast = candidate.get("cast", [])
+            if isinstance(raw_c_cast, list):
+                cand_cast = set(
+                    (c.get("name", "") if isinstance(c, dict) else str(c)).strip().lower()
+                    for c in raw_c_cast[:6]
+                )
+            elif isinstance(raw_c_cast, str):
+                cand_cast = set(x.strip().lower() for x in raw_c_cast.split(",")[:6] if x.strip())
+            else:
+                cand_cast = set()
+
+            shared_actors = target_cast.intersection(cand_cast)
+            if shared_actors:
+                score += min(len(shared_actors) * 0.04, 0.08)
+
+            # 3. Filter out weak/generic recommendations below relevance threshold
+            if score >= min_threshold:
+                rec_dict = dict(candidate)
+                rec_dict["similarity"] = round(score, 4)
+                scored_candidates.append(rec_dict)
+
+        scored_candidates.sort(key=lambda x: x["similarity"], reverse=True)
+        return scored_candidates[:top_n]
 
     def get_recommendations(
         self,
@@ -470,16 +469,14 @@ class MovieRecommender:
         top_n: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Returns top N nearest movie recommendations using KNN cosine distance.
+        Returns top N nearest movie recommendations using KNN cosine distance with thematic & language weighting.
         Guarantees the target movie is never recommended.
         """
-        # Resolve target row index
         target_idx: Optional[int] = None
 
         if movie_id in self.indices_map:
             target_idx = self.indices_map[movie_id]
         else:
-            # Fallback search by ID or string
             for idx, m in enumerate(self.movies):
                 if str(m.get("id")) == str(movie_id) or str(m.get("movie_id")) == str(movie_id):
                     target_idx = idx
@@ -489,40 +486,21 @@ class MovieRecommender:
             return []
 
         target_movie = self.movies[target_idx]
-        target_norm_title = self.normalize_text(target_movie["title"])
 
-        # KNN cosine recommendation
+        # KNN cosine recommendation with smart ranking
         if self.knn_model is not None and self.feature_matrix is not None:
             try:
-                fetch_k = min(top_n + 35, len(self.movies))
+                fetch_k = min(80, len(self.movies))
                 distances, indices = self.knn_model.kneighbors(
                     self.feature_matrix[target_idx],
                     n_neighbors=fetch_k
                 )
-
-                recommendations = []
-                seen_titles = {target_norm_title}
-
-                for dist, idx in zip(distances[0], indices[0]):
-                    if idx == target_idx:
-                        continue
-
-                    candidate = self.movies[idx]
-                    cand_norm_title = self.normalize_text(candidate["title"])
-
-                    # Avoid recommending same movie or duplicates
-                    if cand_norm_title in seen_titles:
-                        continue
-
-                    seen_titles.add(cand_norm_title)
-
-                    rec_dict = dict(candidate)
-                    rec_dict["similarity"] = round(float(max(0.0, 1.0 - dist)), 4)
-                    recommendations.append(rec_dict)
-
-                    if len(recommendations) >= top_n:
-                        break
-
+                recommendations = self._rank_and_filter_candidates(
+                    target_movie=target_movie,
+                    distances=distances,
+                    indices=indices,
+                    top_n=top_n
+                )
                 if recommendations:
                     return recommendations
             except Exception as e:
@@ -531,19 +509,98 @@ class MovieRecommender:
         # Fallback Heuristic Matcher if KNN has an issue
         return self._heuristic_recommendations(target_movie, top_n)
 
+    def recommend_for_new_movie(
+        self,
+        movie_metadata: Dict[str, Any],
+        top_n: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamic Fallback for New / TMDB-Only Movie Releases:
+        1. Takes available metadata (title, genres, overview, director, cast, language).
+        2. Cleans fields and creates feature content text using the exact same weighted structure:
+           Title 3x, Genres 4x, Director 3x, Cast 2x, Overview 2x, Language 1x.
+        3. Transforms the new movie into a TF-IDF vector using the existing tfidf_vectorizer.pkl.
+        4. Compares against the existing tfidf_matrix.pkl using KNN / cosine distance.
+        5. Excludes the target movie itself and returns nearest similar movies.
+        """
+        target_title = self.clean_text(movie_metadata.get("title", ""))
+
+        # Extract & format metadata
+        raw_genres = movie_metadata.get("genres", [])
+        if isinstance(raw_genres, list):
+            genre_names = [g if isinstance(g, str) else g.get("name", "") for g in raw_genres]
+            genres_clean = self.clean_text(" ".join(genre_names))
+        else:
+            genres_clean = self.clean_text(str(raw_genres))
+
+        raw_cast = movie_metadata.get("cast", [])
+        if isinstance(raw_cast, list):
+            cast_names = [c.get("name", "") if isinstance(c, dict) else str(c) for c in raw_cast[:4]]
+            cast_clean = self.clean_text(" ".join(cast_names))
+        else:
+            cast_clean = self.clean_text(str(raw_cast))
+
+        director_clean = self.clean_text(movie_metadata.get("director", ""))
+        language_clean = self.clean_text(movie_metadata.get("language", "Tamil"))
+        overview_clean = self.clean_text(movie_metadata.get("overview", ""))
+
+        # Exact same weighted content feature combination formula used in prepare_features.py
+        feature_content = (
+            f"{target_title} {target_title} {target_title} "
+            f"{genres_clean} {genres_clean} {genres_clean} {genres_clean} "
+            f"{director_clean} {director_clean} {director_clean} "
+            f"{cast_clean} {cast_clean} "
+            f"{overview_clean} {overview_clean} "
+            f"{language_clean}"
+        ).strip()
+
+        if not feature_content:
+            feature_content = f"{target_title} cinema"
+
+        if self.vectorizer is not None and self.knn_model is not None and self.feature_matrix is not None:
+            try:
+                new_vec = self.vectorizer.transform([feature_content])
+                fetch_k = min(80, len(self.movies))
+                distances, indices = self.knn_model.kneighbors(
+                    new_vec,
+                    n_neighbors=fetch_k
+                )
+
+                recommendations = self._rank_and_filter_candidates(
+                    target_movie=movie_metadata,
+                    distances=distances,
+                    indices=indices,
+                    top_n=top_n
+                )
+                if recommendations:
+                    return recommendations
+            except Exception as e:
+                print(f"[MovieRecommender] Dynamic new movie KNN inference error: {e}")
+
+        # Fallback to heuristic recommendation based on target metadata
+        return self._heuristic_recommendations(movie_metadata, top_n=top_n)
+
     def _heuristic_recommendations(
         self,
         target_movie: Dict[str, Any],
         top_n: int = 10
     ) -> List[Dict[str, Any]]:
-        target_genres = set(g.lower() for g in target_movie.get("genres", []))
+        target_genres = set(
+            (g if isinstance(g, str) else g.get("name", "")).lower()
+            for g in target_movie.get("genres", [])
+        )
         target_lang = target_movie.get("language", "").lower()
         target_dir = target_movie.get("director", "").lower()
-        target_norm_title = self.normalize_text(target_movie["title"])
+        target_norm_title = self.normalize_text(target_movie.get("title", ""))
+        target_id_str = str(target_movie.get("id") or target_movie.get("movie_id") or "")
 
         scored = []
         for m in self.movies:
-            if self.normalize_text(m["title"]) == target_norm_title:
+            cand_norm_title = self.normalize_text(m["title"])
+            cand_id_str = str(m.get("id"))
+
+            # Exclude self
+            if cand_norm_title == target_norm_title or (target_id_str and cand_id_str == target_id_str):
                 continue
 
             score = 0.0
@@ -556,7 +613,7 @@ class MovieRecommender:
             if target_dir and m.get("director", "").lower() == target_dir and target_dir != "unknown director":
                 score += 6.0
 
-            score += max(0.0, 10.0 - abs(m.get("rating", 7.0) - target_movie.get("rating", 7.0))) * 0.2
+            score += max(0.0, 10.0 - abs(m.get("rating", 7.0) - float(target_movie.get("rating", 7.0) or 7.0))) * 0.2
             scored.append((score, m))
 
         scored.sort(key=lambda x: x[0], reverse=True)
@@ -584,10 +641,12 @@ class MovieRecommender:
         if not q:
             return self.movies[:limit]
 
+        q_words = [w for w in q.split() if len(w) > 1]
         scored_results: List[Tuple[float, Dict[str, Any]]] = []
 
         for m in self.movies:
             title_norm = self.normalize_text(m.get("title", ""))
+            raw_title_norm = self.normalize_text(m.get("raw_title", ""))
             dir_norm = self.normalize_text(m.get("director", ""))
             lang_norm = self.normalize_text(m.get("language", ""))
             genres_norm = [self.normalize_text(g) for g in m.get("genres", [])]
@@ -596,33 +655,57 @@ class MovieRecommender:
 
             score = 0.0
 
-            if q == title_norm:
-                score += 100.0
-            elif title_norm.startswith(q):
-                score += 50.0
-            elif q in title_norm:
-                score += 25.0
+            # 1. Exact Title Match
+            if q == title_norm or q == raw_title_norm:
+                score += 1000.0
+            # 2. Title Starts-With
+            elif title_norm.startswith(q) or (raw_title_norm and raw_title_norm.startswith(q)):
+                score += 400.0
+            # 3. Substring in title
+            elif len(q) >= 3 and (q in title_norm or (raw_title_norm and q in raw_title_norm)):
+                score += 250.0
 
+            # 4. Fuzzy Title Similarity (Handles spelling errors like 'vada chenai', 'vikramm', 'jai bheem', 'interstaller')
+            sim_ratio = self.calculate_similarity_ratio(q, title_norm)
+            if raw_title_norm and raw_title_norm != title_norm:
+                sim_ratio = max(sim_ratio, self.calculate_similarity_ratio(q, raw_title_norm))
+
+            if sim_ratio >= 0.85:
+                score += 500.0 * sim_ratio
+            elif sim_ratio >= 0.70:
+                score += 300.0 * sim_ratio
+            elif sim_ratio >= 0.60 and len(q) >= 5:
+                score += 150.0 * sim_ratio
+
+            # 5. Token words match in title
+            if q_words:
+                title_words = title_norm.split()
+                matched_words = sum(1 for qw in q_words if any(qw == tw or self.calculate_similarity_ratio(qw, tw) >= 0.80 for tw in title_words))
+                if matched_words == len(q_words) and len(q_words) > 1:
+                    score += 350.0
+                elif matched_words > 0 and len(q_words) > 1:
+                    score += 120.0 * (matched_words / len(q_words))
+
+            # 6. Cast, Director, Language, Genre matching
             if any(q == c for c in cast_names):
-                score += 20.0
-            elif any(q in c for c in cast_names):
-                score += 10.0
+                score += 120.0
+            elif any(q in c for c in cast_names if len(q) >= 4):
+                score += 60.0
 
             if q in dir_norm and dir_norm != "unknown director":
-                score += 15.0
+                score += 90.0
 
             if q == lang_norm:
-                score += 12.0
-            elif q in lang_norm:
-                score += 6.0
+                score += 70.0
 
-            if any(q in g for g in genres_norm):
-                score += 10.0
+            if any(q == g for g in genres_norm):
+                score += 50.0
 
-            if q in overview_norm:
-                score += 3.0
+            if len(q) >= 4 and q in overview_norm:
+                score += 15.0
 
-            if score > 0:
+            # Filter out single-letter/negligible accidental matches
+            if score >= 35.0:
                 score += (m.get("rating", 0.0) * 0.5)
                 scored_results.append((score, m))
 
@@ -765,4 +848,3 @@ if __name__ == "__main__":
                     f"Director: {rec.get('director', 'Unknown')} | "
                     f"Genres: {genres_str}"
                 )
->>>>>>> 12d9995 (feat: CineX ML movie recommendation system with TMDB trailer modal, reviews, and watchlists)
