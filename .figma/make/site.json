@@ -1,8 +1,8 @@
 {
-  "title": "CineX - Movie Recommendation App",
-  "description": "CineX is a premium movie discovery and recommendation platform. Find, explore, and enjoy cinema from around the world.",
+  "title": "CineX – AI Movie Recommendation System | Discover Your Next Movie",
+  "description": "CineX is an AI-powered movie recommendation system using KNN and TF-IDF to help users discover relevant movies, including Indian and Tamil movies, with details, ratings, posters and trailers.",
   "robots": {
-    "index": false
+    "index": true
   },
   "accessibility": {
     "addBypassLinks": false,
