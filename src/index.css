@@ -38,6 +38,16 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Hide Netlify drawer / collaborative badge */
+[data-netlify-deploy-id],
+iframe[src*="netlify"],
+.netlify-identity-widget,
+#netlify-drawer,
+netlify-drawer,
+[class*="netlify-drawer"] {
+  display: none !important;
+}
+
 /* Safe area padding for mobile bottom bar */
 .safe-area-pb {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
