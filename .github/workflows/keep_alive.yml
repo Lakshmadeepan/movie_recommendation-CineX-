@@ -1,0 +1,23 @@
+name: Keep Render Backend Alive
+
+on:
+  schedule:
+    # Runs every 10 minutes to prevent Render from sleeping (Render sleeps after 15 mins)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-backend:
+    name: Ping CineX Backend API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send keep-alive HTTP GET request
+        run: |
+          echo "Pinging CineX Backend on Render..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://movie-recommendation-cinex.onrender.com/api/health" || echo "failed")
+          echo "Response HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "Backend is alive and healthy! 🚀"
+          else
+            echo "Warning: Response status was $HTTP_STATUS"
+          fi

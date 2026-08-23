@@ -31,7 +31,7 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "dataset", "movies_fea
 recommender = MovieRecommender(DATA_PATH)
 
 
-@app.get("/", tags=["Root"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
 def root():
     return {
         "message": "Welcome to CineX Movie Recommendation API",
@@ -43,7 +43,8 @@ def root():
     }
 
 
-@app.get("/api/health", response_model=HealthResponse, tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse, tags=["Health"])
+@app.api_route("/api/health", methods=["GET", "HEAD"], response_model=HealthResponse, tags=["Health"])
 def health_check():
     return HealthResponse(
         status="healthy",
