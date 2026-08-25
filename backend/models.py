@@ -32,6 +32,14 @@ class Movie(BaseModel):
     revenue_crores: Optional[float] = 0.0
     popularity: Optional[float] = 0.0
     imdb_id: Optional[str] = ""
+    tmdb_id: Optional[int] = None
+    original_language: Optional[str] = None
+    original_title: Optional[str] = None
+    spoken_languages: List[str] = Field(default_factory=list)
+    language_match: Optional[bool] = None
+    release_date: Optional[str] = ""
+    similarity: Optional[float] = None
+    status: Optional[str] = "Released"
     rating_source: Optional[str] = "TMDB"
     streaming: List[StreamingPlatform] = Field(default_factory=list)
 

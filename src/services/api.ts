@@ -27,6 +27,10 @@ export interface Movie {
   cast: CastMember[];
   rating_source?: string;
   streaming: StreamingPlatform[];
+  tmdb_id?: number;
+  release_date?: string;
+  similarity?: number | null;
+  status?: string;
 }
 
 export const FALLBACK_MOVIES: Movie[] = [
@@ -249,20 +253,54 @@ export const FALLBACK_MOVIES: Movie[] = [
   },
 ];
 
+export function deduplicateMovies(movies: Movie[]): Movie[] {
+  if (!Array.isArray(movies)) return [];
+  const seen = new Set<string>();
+  const unique: Movie[] = [];
+  for (const m of movies) {
+    if (!m) continue;
+    const idKey = m.tmdb_id ? `tmdb_${m.tmdb_id}` : `id_${m.id}`;
+    const titleKey = `${(m.title || "").toLowerCase().trim()}_${m.year || 0}`;
+    if (seen.has(idKey) || (m.title && seen.has(titleKey))) continue;
+    seen.add(idKey);
+    if (m.title) seen.add(titleKey);
+    unique.push(m);
+  }
+  return unique;
+}
+
 const RAW_API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  "https://movie-recommendation-cinex.onrender.com"
+  ""
 ).trim();
 const API_BASE = RAW_API_BASE ? `${RAW_API_BASE.replace(/\/+$/, "")}/api` : "/api";
 
+const apiCache = new Map<string, { data: any; ts: number }>();
+const CLIENT_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 async function fetchJson<T>(url: string, fallback: T): Promise<T> {
+  const cached = apiCache.get(url);
+  if (cached && Date.now() - cached.ts < CLIENT_CACHE_TTL) {
+    return cached.data as T;
+  }
+
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    let result = data;
+    if (Array.isArray(data)) {
+      result = deduplicateMovies(data as Movie[]);
+    }
+    apiCache.set(url, { data: result, ts: Date.now() });
+    return result as unknown as T;
   } catch (err) {
-    console.warn(`[CineX API] Failed to fetch from ${url}, using local fallback data:`, err);
+    if (cached) return cached.data as T;
+    console.warn(`[CineX API] Failed to fetch from ${url}, using fallback:`, err);
+    if (Array.isArray(fallback)) {
+      return deduplicateMovies(fallback as Movie[]) as unknown as T;
+    }
     return fallback;
   }
 }
@@ -296,7 +334,7 @@ export async function getMovieById(id: number): Promise<Movie | null> {
   return fetchJson<Movie | null>(`${API_BASE}/movies/${id}`, fallback);
 }
 
-export async function getRecommendations(movieId: number, limit = 6): Promise<Movie[]> {
+export async function getRecommendations(movieId: number, limit = 10): Promise<Movie[]> {
   const targetMovie = FALLBACK_MOVIES.find((m) => m.id === movieId);
   const fallback = targetMovie
     ? FALLBACK_MOVIES.filter(

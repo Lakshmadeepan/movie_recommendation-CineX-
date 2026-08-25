@@ -150,8 +150,11 @@ function MovieCard({
   return (
     <div
       onClick={onClick}
-      className={`group relative flex-shrink-0 w-32 sm:w-40 md:w-44 text-left rounded-xl overflow-hidden bg-white shadow-xs border border-stone-200/80 hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer card-stagger-${Math.min(staggerIdx, 6)} active:scale-98`}
-      style={{ transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s" }}
+      className={`group relative flex-shrink-0 w-32 sm:w-40 md:w-44 text-left rounded-xl overflow-hidden bg-white shadow-xs border border-stone-200/80 hover:border-amber-400/60 hover:shadow-xl hover:-translate-y-1.5 hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer card-stagger-${Math.min(
+        staggerIdx,
+        12
+      )} active:scale-98`}
+      style={{ transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s, border-color 0.25s" }}
     >
       <div className="relative overflow-hidden bg-stone-200" style={{ paddingBottom: "150%" }}>
         <img
@@ -163,7 +166,7 @@ function MovieCard({
             }
           }}
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-106"
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105"
           style={{ transition: "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
         <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">
@@ -191,6 +194,15 @@ function MovieCard({
             {isWatchlist ? "🔖" : "🏷️"}
           </button>
         </div>
+
+        {/* Similarity Match Badge (only shown when valid similarity score exists) */}
+        {typeof movie.similarity === "number" && !isNaN(movie.similarity) && movie.similarity > 0 && (
+          <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-10">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-amber-500/90 text-stone-950 shadow-sm backdrop-blur-xs font-mono-data">
+              {Math.round(movie.similarity * 100)}% Match
+            </span>
+          </div>
+        )}
 
         <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
       </div>
@@ -223,8 +235,11 @@ function MovieGridCard({
   return (
     <div
       onClick={onClick}
-      className={`group relative text-left rounded-xl overflow-hidden bg-white shadow-xs border border-stone-200/80 hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer card-stagger-${Math.min(staggerIdx, 6)} active:scale-98`}
-      style={{ transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s" }}
+      className={`group relative text-left rounded-xl overflow-hidden bg-white shadow-xs border border-stone-200/80 hover:border-amber-400/60 hover:shadow-xl hover:-translate-y-1.5 hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer card-stagger-${Math.min(
+        staggerIdx,
+        12
+      )} active:scale-98`}
+      style={{ transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s, border-color 0.25s" }}
     >
       <div className="relative overflow-hidden bg-stone-200" style={{ paddingBottom: "150%" }}>
         <img
@@ -236,7 +251,7 @@ function MovieGridCard({
             }
           }}
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-106"
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105"
           style={{ transition: "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
         <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">
@@ -265,6 +280,15 @@ function MovieGridCard({
           </button>
         </div>
 
+        {/* Similarity Match Badge (only shown when valid similarity score exists) */}
+        {typeof movie.similarity === "number" && !isNaN(movie.similarity) && movie.similarity > 0 && (
+          <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-10">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-amber-500/90 text-stone-950 shadow-sm backdrop-blur-xs font-mono-data">
+              {Math.round(movie.similarity * 100)}% Match
+            </span>
+          </div>
+        )}
+
         <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
       </div>
       <div className="p-2 sm:p-3">
@@ -291,6 +315,7 @@ function MovieCarousel({
   watchlist,
   onToggleFavorite,
   onToggleWatchlist,
+  loading = false,
 }: {
   title: string;
   subtitle?: string;
@@ -300,13 +325,12 @@ function MovieCarousel({
   watchlist: Movie[];
   onToggleFavorite: (e: React.MouseEvent, m: Movie) => void;
   onToggleWatchlist: (e: React.MouseEvent, m: Movie) => void;
+  loading?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const scroll = (dir: "l" | "r") => {
     if (ref.current) ref.current.scrollBy({ left: dir === "r" ? 300 : -300, behavior: "smooth" });
   };
-
-  if (!movies || movies.length === 0) return null;
 
   return (
     <section className="py-5 sm:py-7">
@@ -331,18 +355,31 @@ function MovieCarousel({
         </div>
       </div>
       <div ref={ref} className="flex gap-3 sm:gap-4 overflow-x-auto scroll-hide snap-x px-4 md:px-8 pb-2 pt-1">
-        {movies.map((m, idx) => (
-          <MovieCard
-            key={m.id}
-            movie={m}
-            onClick={() => onSelect(m)}
-            isFavorite={favorites.some((f) => f.id === m.id)}
-            isWatchlist={watchlist.some((w) => w.id === m.id)}
-            onToggleFavorite={onToggleFavorite}
-            onToggleWatchlist={onToggleWatchlist}
-            staggerIdx={(idx % 6) + 1}
-          />
-        ))}
+        {loading || movies.length === 0
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 w-32 sm:w-40 md:w-44 rounded-xl overflow-hidden bg-white shadow-xs border border-stone-100"
+              >
+                <div className="shimmer" style={{ paddingBottom: "150%" }} />
+                <div className="p-2 sm:p-2.5 space-y-1.5">
+                  <div className="h-3 bg-stone-200 rounded w-3/4" />
+                  <div className="h-2 bg-stone-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))
+          : movies.map((m, idx) => (
+              <MovieCard
+                key={m.id}
+                movie={m}
+                onClick={() => onSelect(m)}
+                isFavorite={favorites.some((f) => f.id === m.id)}
+                isWatchlist={watchlist.some((w) => w.id === m.id)}
+                onToggleFavorite={onToggleFavorite}
+                onToggleWatchlist={onToggleWatchlist}
+                staggerIdx={(idx % 12) + 1}
+              />
+            ))}
       </div>
     </section>
   );
@@ -962,18 +999,32 @@ function HomePage({
   onToggleWatchlist: (e: React.MouseEvent, m: Movie) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [trending, setTrending] = useState<Movie[]>(FALLBACK_MOVIES.slice(0, 8));
-  const [popular, setPopular] = useState<Movie[]>(FALLBACK_MOVIES);
-  const [tamil, setTamil] = useState<Movie[]>(FALLBACK_MOVIES.filter((m) => m.language === "Tamil"));
+  const [trending, setTrending] = useState<Movie[]>([]);
+  const [popular, setPopular] = useState<Movie[]>([]);
+  const [tamil, setTamil] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
   const [heroIdx, setHeroIdx] = useState(0);
 
   const heroMovies = trending.slice(0, 4);
-  const hero = heroMovies[heroIdx] || FALLBACK_MOVIES[0];
+  const hero = heroMovies[heroIdx] || null;
 
   useEffect(() => {
-    getTrendingMovies().then(setTrending);
-    getTopRatedMovies().then(setPopular);
-    getTamilMovies().then(setTamil);
+    let isMounted = true;
+    Promise.all([
+      getTrendingMovies(),
+      getTopRatedMovies(),
+      getTamilMovies(),
+    ]).then(([t, p, ta]) => {
+      if (isMounted) {
+        setTrending(t);
+        setPopular(p);
+        setTamil(ta);
+        setLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -986,79 +1037,90 @@ function HomePage({
     <div className="page-fade-in">
       {/* Hero Header (Responsive for Mobile & Desktop) */}
       <div className="relative h-[55vh] sm:h-[65vh] min-h-[380px] sm:min-h-[440px] overflow-hidden bg-black">
-        <img
-          key={hero.id}
-          src={hero.backdrop || DEFAULT_POSTER}
-          alt={hero.title}
-          className="absolute inset-0 w-full h-full object-cover opacity-80 page-fade-in"
-          style={{ transition: "opacity 0.8s" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#FAF8F4] via-transparent to-transparent" />
-
-        <div className="relative z-10 h-full flex flex-col justify-center px-4 sm:px-8 md:px-16 max-w-4xl">
-          <div className="flex items-center gap-2 mb-2 sm:mb-3">
-            <span className="px-2.5 py-0.5 bg-amber-500 text-stone-950 font-bold text-[9px] sm:text-[10px] uppercase font-mono-data rounded-full">
-              Trending Spotlight
-            </span>
-            <span className="text-stone-300 text-xs font-mono-data">{hero.language} · {hero.year}</span>
-          </div>
-
-          <h1 className="font-display text-2xl sm:text-4xl md:text-6xl text-white leading-tight mb-1.5 sm:mb-2 tracking-tight">
-            {hero.title}
-          </h1>
-          <p className="text-stone-300 text-xs sm:text-sm md:text-base max-w-lg mb-4 sm:mb-6 line-clamp-2 leading-relaxed">
-            {hero.overview}
-          </p>
-
-          {/* Hero Search */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (query.trim()) onSearch(query.trim());
-            }}
-            className="flex items-center bg-white/95 backdrop-blur-md rounded-full shadow-2xl overflow-hidden max-w-xl border border-white/20"
-          >
-            <span className="pl-3 sm:pl-4 text-stone-400 text-xs sm:text-sm">🔍</span>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search movies, Tamil blockbusters..."
-              className="flex-1 px-2.5 sm:px-3 py-2.5 sm:py-3.5 text-xs sm:text-sm text-stone-800 bg-transparent focus:outline-none placeholder-stone-400"
+        {hero ? (
+          <>
+            <img
+              key={hero.id}
+              src={hero.backdrop || DEFAULT_POSTER}
+              alt={hero.title}
+              className="absolute inset-0 w-full h-full object-cover opacity-80 page-fade-in"
+              style={{ transition: "opacity 0.8s" }}
             />
-            <button
-              type="submit"
-              className="m-1 bg-amber-500 hover:bg-amber-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold cursor-pointer shadow-md transition-transform active:scale-95 flex-shrink-0"
-            >
-              Search
-            </button>
-          </form>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#FAF8F4] via-transparent to-transparent" />
 
-          {/* Hero indicators */}
-          {heroMovies.length > 1 && (
-            <div className="flex gap-1.5 sm:gap-2 mt-4 sm:mt-5 items-center">
-              {heroMovies.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setHeroIdx(i)}
-                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    i === heroIdx ? "w-6 sm:w-8 bg-amber-400" : "w-2.5 sm:w-3 bg-white/40 hover:bg-white/60"
-                  }`}
+            <div className="relative z-10 h-full flex flex-col justify-center px-4 sm:px-8 md:px-16 max-w-4xl hero-entrance">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <span className="px-2.5 py-0.5 bg-amber-500 text-stone-950 font-bold text-[9px] sm:text-[10px] uppercase font-mono-data rounded-full">
+                  Trending Spotlight
+                </span>
+                <span className="text-stone-300 text-xs font-mono-data">{hero.language} · {hero.year}</span>
+              </div>
+
+              <h1 className="font-display text-2xl sm:text-4xl md:text-6xl text-white leading-tight mb-1.5 sm:mb-2 tracking-tight">
+                {hero.title}
+              </h1>
+              <p className="text-stone-300 text-xs sm:text-sm md:text-base max-w-lg mb-4 sm:mb-6 line-clamp-2 leading-relaxed">
+                {hero.overview}
+              </p>
+
+              {/* Hero Search */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (query.trim()) onSearch(query.trim());
+                }}
+                className="flex items-center bg-white/95 backdrop-blur-md rounded-full shadow-2xl overflow-hidden max-w-xl border border-white/20 hover:border-amber-400/50 focus-within:border-amber-500 focus-within:ring-4 focus-within:ring-amber-400/20 transition-all duration-300"
+              >
+                <span className="pl-3 sm:pl-4 text-stone-400 text-xs sm:text-sm">🔍</span>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search movies, Tamil blockbusters..."
+                  className="flex-1 px-2.5 sm:px-3 py-2.5 sm:py-3.5 text-xs sm:text-sm text-stone-800 bg-transparent focus:outline-none placeholder-stone-400"
                 />
-              ))}
-            </div>
-          )}
-        </div>
+                <button
+                  type="submit"
+                  className="m-1 bg-amber-500 hover:bg-amber-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold cursor-pointer shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg hover:brightness-105 flex-shrink-0"
+                >
+                  Search
+                </button>
+              </form>
 
-        {/* View details button */}
-        <div className="absolute bottom-6 right-4 sm:bottom-8 sm:right-16 flex items-center gap-3 z-10">
-          <button
-            onClick={() => onSelect(hero)}
-            className="bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-lg cursor-pointer active:scale-95"
-          >
-            Details ›
-          </button>
-        </div>
+              {/* Hero indicators */}
+              {heroMovies.length > 1 && (
+                <div className="flex gap-1.5 sm:gap-2 mt-4 sm:mt-5 items-center">
+                  {heroMovies.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setHeroIdx(i)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        i === heroIdx ? "w-6 sm:w-8 bg-amber-400" : "w-2.5 sm:w-3 bg-white/40 hover:bg-white/60"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* View details button */}
+            <div className="absolute bottom-6 right-4 sm:bottom-8 sm:right-16 flex items-center gap-3 z-10">
+              <button
+                onClick={() => onSelect(hero)}
+                className="bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-lg cursor-pointer active:scale-95"
+              >
+                Details ›
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-stone-950 flex flex-col justify-center px-4 sm:px-8 md:px-16 max-w-4xl">
+            <div className="w-32 h-4 bg-stone-800 rounded-full mb-3 shimmer opacity-40" />
+            <div className="w-64 sm:w-96 h-8 sm:h-12 bg-stone-800 rounded-xl mb-3 shimmer opacity-40" />
+            <div className="w-full max-w-lg h-10 bg-stone-800 rounded-xl mb-6 shimmer opacity-30" />
+            <div className="w-full max-w-xl h-11 bg-stone-900 border border-stone-800 rounded-full" />
+          </div>
+        )}
       </div>
 
       {/* Genre / Language quick chips */}
@@ -1120,6 +1182,7 @@ function HomePage({
           title="🔥 Trending Now"
           subtitle="Top streamed movies this week"
           movies={trending}
+          loading={loading}
           onSelect={onSelect}
           favorites={favorites}
           watchlist={watchlist}
@@ -1131,6 +1194,7 @@ function HomePage({
           title="⭐ Top Rated Cinema"
           subtitle="Critically acclaimed movies with highest scores"
           movies={popular}
+          loading={loading}
           onSelect={onSelect}
           favorites={favorites}
           watchlist={watchlist}
@@ -1142,6 +1206,7 @@ function HomePage({
           title="🎭 Tamil & South Cinema"
           subtitle="Kollywood blockbusters, thrillers & dramas"
           movies={tamil}
+          loading={loading}
           onSelect={onSelect}
           favorites={favorites}
           watchlist={watchlist}
@@ -1173,8 +1238,8 @@ function SearchResults({
 }) {
   const [localQuery, setLocalQuery] = useState(query);
   const [activeQuery, setActiveQuery] = useState(query);
-  const [results, setResults] = useState<Movie[]>(FALLBACK_MOVIES);
-  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLocalQuery(query);
@@ -1238,31 +1303,47 @@ function SearchResults({
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-xs border border-stone-100"
-            >
-              <div className="shimmer" style={{ paddingBottom: "150%" }} />
-              <div className="p-2.5 space-y-1.5">
-                <div className="h-3 bg-stone-200 rounded w-3/4" />
-                <div className="h-2 bg-stone-100 rounded w-1/2" />
-              </div>
+        <div className="py-12 sm:py-16 text-center page-fade-in">
+          <div className="inline-flex flex-col items-center justify-center p-6 sm:p-8 bg-white rounded-3xl border border-stone-200 shadow-sm max-w-sm mx-auto mb-8">
+            <div className="relative mb-3.5">
+              <span className="text-3xl sm:text-4xl inline-block animate-reel-spin">🎞️</span>
+              <div className="absolute -inset-2 bg-amber-400/25 rounded-full blur-md animate-pulse-glow pointer-events-none" />
             </div>
-          ))}
+            <h3 className="font-display text-base sm:text-lg text-stone-800 font-semibold mb-1">
+              Finding movies you may love...
+            </h3>
+            <p className="text-stone-400 text-xs">
+              Matching language metadata & neural similarity
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 opacity-50">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-xs border border-stone-100"
+              >
+                <div className="shimmer" style={{ paddingBottom: "150%" }} />
+                <div className="p-2.5 space-y-1.5">
+                  <div className="h-3 bg-stone-200 rounded w-3/4" />
+                  <div className="h-2 bg-stone-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : results.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-stone-100 p-6 max-w-lg mx-auto">
-          <div className="text-4xl mb-3">🎬</div>
-          <h3 className="font-display text-xl sm:text-2xl text-stone-700 mb-1.5">No movies found</h3>
-          <p className="text-stone-400 text-xs sm:text-sm mb-4">Try searching for a different title, actor, or genre.</p>
+        <div className="text-center py-16 bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 max-w-lg mx-auto shadow-sm page-fade-in">
+          <div className="text-4xl sm:text-5xl mb-3">🎬</div>
+          <h3 className="font-display text-xl sm:text-2xl text-stone-800 mb-1.5">No movies found</h3>
+          <p className="text-stone-400 text-xs sm:text-sm mb-5 leading-relaxed">
+            We couldn't find matches for "<span className="font-semibold text-stone-700">{activeQuery}</span>". Try searching for a Tamil title, actor, or genre.
+          </p>
           <button
             onClick={() => {
               setLocalQuery("");
               setActiveQuery("");
             }}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-5 py-2.5 rounded-full cursor-pointer shadow-sm active:scale-95"
+            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-6 py-2.5 rounded-full cursor-pointer shadow-md transition-all active:scale-95 hover:shadow-lg hover:brightness-105"
           >
             Show All Movies
           </button>
@@ -1278,7 +1359,7 @@ function SearchResults({
               isWatchlist={watchlist.some((w) => w.id === m.id)}
               onToggleFavorite={onToggleFavorite}
               onToggleWatchlist={onToggleWatchlist}
-              staggerIdx={(idx % 6) + 1}
+              staggerIdx={(idx % 12) + 1}
             />
           ))}
         </div>
@@ -1403,6 +1484,7 @@ function MovieDetailsPage({
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [tab, setTab] = useState<"overview" | "reviews" | "cast" | "media">("overview");
   const [recommended, setRecommended] = useState<Movie[]>([]);
+  const [recLoading, setRecLoading] = useState(true);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1410,7 +1492,10 @@ function MovieDetailsPage({
     getMovieById(movie.id).then((details) => {
       if (details) setFullMovie(details);
     });
-    getRecommendations(movie.id, 10).then(setRecommended);
+    setRecLoading(true);
+    getRecommendations(movie.id, 10)
+      .then(setRecommended)
+      .finally(() => setRecLoading(false));
   }, [movie.id]);
 
   return (
@@ -1767,7 +1852,7 @@ function MovieDetailsPage({
       </div>
 
       {/* KNN Recommendations Carousel */}
-      {recommended.length > 0 && (
+      {(recLoading || recommended.length > 0) && (
         <div className="border-t border-stone-200 bg-[#FAF8F4]">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between px-4 md:px-8 pt-6 pb-2.5">
@@ -1793,18 +1878,31 @@ function MovieDetailsPage({
               </div>
             </div>
             <div ref={carouselRef} className="flex gap-3 sm:gap-4 overflow-x-auto scroll-hide snap-x px-4 md:px-8 pb-6">
-              {recommended.map((m, idx) => (
-                <MovieCard
-                  key={m.id}
-                  movie={m}
-                  onClick={() => onSelect(m)}
-                  isFavorite={favorites.some((f) => f.id === m.id)}
-                  isWatchlist={watchlist.some((w) => w.id === m.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  onToggleWatchlist={onToggleWatchlist}
-                  staggerIdx={(idx % 6) + 1}
-                />
-              ))}
+              {recLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex-shrink-0 w-32 sm:w-40 md:w-44 rounded-xl overflow-hidden bg-white shadow-xs border border-stone-100"
+                    >
+                      <div className="shimmer" style={{ paddingBottom: "150%" }} />
+                      <div className="p-2 sm:p-2.5 space-y-1.5">
+                        <div className="h-3 bg-stone-200 rounded w-3/4" />
+                        <div className="h-2 bg-stone-100 rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))
+                : recommended.map((m, idx) => (
+                    <MovieCard
+                      key={m.id}
+                      movie={m}
+                      onClick={() => onSelect(m)}
+                      isFavorite={favorites.some((f) => f.id === m.id)}
+                      isWatchlist={watchlist.some((w) => w.id === m.id)}
+                      onToggleFavorite={onToggleFavorite}
+                      onToggleWatchlist={onToggleWatchlist}
+                      staggerIdx={(idx % 12) + 1}
+                    />
+                  ))}
             </div>
           </div>
         </div>

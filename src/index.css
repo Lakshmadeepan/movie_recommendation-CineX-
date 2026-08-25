@@ -72,12 +72,27 @@ netlify-drawer,
   animation: pageSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.card-stagger-1 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.04s; }
-.card-stagger-2 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.08s; }
-.card-stagger-3 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.12s; }
-.card-stagger-4 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.16s; }
-.card-stagger-5 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.20s; }
-.card-stagger-6 { animation: cardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both 0.24s; }
+.hero-entrance {
+  animation: heroEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.card-stagger-1 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.03s; }
+.card-stagger-2 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.06s; }
+.card-stagger-3 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.09s; }
+.card-stagger-4 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.12s; }
+.card-stagger-5 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.15s; }
+.card-stagger-6 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.18s; }
+.card-stagger-7 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.21s; }
+.card-stagger-8 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.24s; }
+.card-stagger-9 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.27s; }
+.card-stagger-10 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.30s; }
+.card-stagger-11 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.33s; }
+.card-stagger-12 { animation: cardEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both 0.36s; }
+
+@keyframes heroEntrance {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 @keyframes pageFadeIn {
   from { opacity: 0; transform: translateY(4px); }
@@ -90,8 +105,25 @@ netlify-drawer,
 }
 
 @keyframes cardEnter {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Film Reel & Loading Animations */
+@keyframes reelSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-reel-spin {
+  animation: reelSpin 2.4s linear infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.45)); }
+}
+.animate-pulse-glow {
+  animation: pulseGlow 2.2s ease-in-out infinite;
 }
 
 /* Trailer modal */
@@ -143,4 +175,14 @@ netlify-drawer,
   background: linear-gradient(90deg, #f0ede6 25%, #f8f6f0 50%, #f0ede6 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,5 +1,6 @@
 import os
-from typing import List, Optional
+import time
+from typing import List, Optional, Dict, Tuple
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -171,81 +172,202 @@ def get_box_office_hits(limit: int = Query(12, ge=1, le=50)):
 
 @app.get("/api/movies/{movie_id}", response_model=Movie, tags=["Movies"])
 def get_movie_by_id(movie_id: int):
-    # 1. Check local ML dataset
-    if movie_id in recommender.movie_map:
-        local_movie = recommender.movie_map[movie_id]
-        return tmdb_service.enrich_movie(local_movie)
-
-    # 2. Check TMDB directly by TMDB ID
+    # 1. Check TMDB directly by TMDB ID (standard frontend ID)
     if tmdb_service.is_configured():
         details = tmdb_service.get_movie_details(movie_id)
         if details:
             return details
 
+    # 2. Check local ML dataset
+    if movie_id in recommender.movie_map:
+        local_movie = recommender.movie_map[movie_id]
+        return tmdb_service.enrich_movie(local_movie)
+
     raise HTTPException(status_code=404, detail="Movie not found")
+
+
+_recommendations_cache: Dict[str, Tuple[float, List[dict]]] = {}
+_search_endpoint_cache: Dict[str, Tuple[float, List[dict]]] = {}
+CACHE_TTL = 1800  # 30 minutes
 
 
 @app.get("/api/movies/{movie_id}/recommendations", response_model=List[Movie], tags=["Recommendations"])
 def get_recommendations(movie_id: int, limit: int = Query(10, ge=1, le=30)):
     """
-    Step 1: If movie is in local KNN dataset -> run KNN recommendations.
-    Step 2: If movie is NEW / TMDB-only (not in local dataset) -> dynamically extract TMDB metadata,
-            transform with existing tfidf_vectorizer.pkl (NO retraining), and compute nearest KNN neighbors.
-    Step 3: Guarantees the target movie itself is NEVER recommended.
-    Step 4: Enriches each recommended movie with dynamic TMDB metadata (posters, backdrops, trailers, cast, streaming).
+    Intelligent Language-Aware Recommendation Pipeline:
+    1. Resolve target movie language (Tamil -> ta, English -> en, Telugu -> te, Hindi -> hi) and metadata.
+    2. Retrieve high-quality candidates from local KNN and/or TMDB discovery endpoints.
+    3. Validate every candidate on TMDB (original_language, genres, title, release date, poster).
+    4. Apply multi-factor language-aware ranking:
+       Final Score = ML Similarity + Language Priority Bonus + Genre Synergy + Director/Cast Affinity.
+       Tamil target -> Maximum relevant Tamil movies.
+       English target -> Prioritizes relevant English movies.
+    5. Deduplicate by TMDB ID and normalized title.
+    6. Strict self-exclusion of target movie.
+    7. Return clean, unique recommendations with genuine ML similarity.
     """
-    target_idx: Optional[int] = None
-    target_movie_title: str = ""
-    tmdb_details: Optional[dict] = None
+    cache_key = f"rec_{movie_id}_{limit}"
+    now = time.time()
+    if cache_key in _recommendations_cache:
+        ts, cached = _recommendations_cache[cache_key]
+        if now - ts < CACHE_TTL:
+            return cached
 
-    # 1. Check local ML dataset by ID
-    if movie_id in recommender.indices_map:
-        target_idx = recommender.indices_map[movie_id]
-        target_movie = recommender.movies[target_idx]
-        target_movie_title = target_movie.get("title", "")
-    elif tmdb_service.is_configured():
-        # Fetch TMDB details for the ID
+    target_idx: Optional[int] = None
+    target_movie: Optional[dict] = None
+    target_movie_title: str = ""
+    target_tmdb_id: Optional[int] = None
+    tmdb_details: Optional[dict] = None
+    target_lang = ""
+    target_orig_lang = ""
+
+    # 1. Primary: Resolve TMDB details by ID (standard frontend movie_id is TMDB ID)
+    if tmdb_service.is_configured():
+        target_tmdb_id = movie_id
         tmdb_details = tmdb_service.get_movie_details(movie_id)
         if tmdb_details:
             target_movie_title = tmdb_details.get("title", "")
-            # Check if title exists in local dataset with high confidence
-            target_idx = recommender.find_movie(target_movie_title, min_similarity=0.88)
+            target_lang = tmdb_details.get("language", "")
+            target_orig_lang = tmdb_details.get("original_language", "")
+            # Check if matching movie exists in local dataset with language & year alignment
+            target_idx = recommender.find_movie(
+                target_movie_title,
+                min_similarity=0.90,
+                language=target_lang,
+                year=tmdb_details.get("year")
+            )
+            if target_idx is not None:
+                target_movie = recommender.movies[target_idx]
 
-    raw_recommendations: List[dict] = []
-
-    if target_idx is not None:
-        # Existing movie in KNN dataset
+    # 1b. Fallback: Check local ML dataset by ID if TMDB details were not found
+    if target_movie is None and movie_id in recommender.indices_map:
+        target_idx = recommender.indices_map[movie_id]
         target_movie = recommender.movies[target_idx]
-        raw_recommendations = recommender.get_recommendations(target_movie["id"], top_n=limit)
+        target_movie_title = target_movie.get("title", "")
+        target_lang = target_movie.get("language", "")
+        lang_to_code = {"tamil": "ta", "telugu": "te", "malayalam": "ml", "hindi": "hi", "kannada": "kn", "english": "en"}
+        target_orig_lang = lang_to_code.get(target_lang.lower(), "")
+
+    raw_candidates: List[dict] = []
+    is_tmdb_fallback = False
+
+    if target_idx is not None and target_movie:
+        # Existing movie in local KNN dataset: fetch 2x candidate pool for language filtering & deduplication
+        raw_candidates = recommender.get_recommendations(target_movie["id"], top_n=max(limit * 2, 20))
     elif tmdb_details:
-        # NEW MOVIE RELEASE (exists in TMDB, not in static ML dataset)
-        # Uses existing TF-IDF vectorizer + KNN cosine distance fallback
-        raw_recommendations = recommender.recommend_for_new_movie(tmdb_details, top_n=limit)
+        # Movie exists on TMDB but NOT in local ML dataset: Use TMDB Discovery + Dynamic Feature Space KNN
+        is_tmdb_fallback = True
+        tmdb_recs = tmdb_service.get_tmdb_fallback_recommendations(movie_id, limit=limit * 2)
+        dynamic_knn = recommender.recommend_for_new_movie(tmdb_details, top_n=limit * 2)
+        raw_candidates = tmdb_recs + dynamic_knn
     else:
-        # Fallback to top-rated
-        raw_recommendations = recommender.get_top_rated(limit=limit)
+        # Final fallback to top rated movies
+        raw_candidates = recommender.get_top_rated(limit=limit * 2)
 
-    # SAFETY CHECK: Ensure target movie is NEVER in recommendations
+    # 2. Enrich candidates with TMDB metadata & perform post-enrichment deduplication
+    enriched_candidates = tmdb_service.enrich_movies_batch(raw_candidates, deduplicate=True)
+
+    # 3. Dynamic Language-Aware Multi-Factor Ranking
+    t_orig = target_orig_lang.lower() if target_orig_lang else ""
+    t_lang = target_lang.lower() if target_lang else ""
+    is_target_tamil = t_orig == "ta" or t_lang == "tamil"
+    is_target_indian = is_target_tamil or t_orig in {"te", "hi", "ml", "kn"} or t_lang in {"telugu", "hindi", "malayalam", "kannada"}
+
+    t_dir = ""
+    if target_movie:
+        t_dir = str(target_movie.get("director", "")).strip().lower()
+    elif tmdb_details:
+        t_dir = str(tmdb_details.get("director", "")).strip().lower()
+
+    t_genres = set()
+    if target_movie:
+        t_genres = set((g if isinstance(g, str) else g.get("name", "")).lower() for g in target_movie.get("genres", []))
+    elif tmdb_details:
+        t_genres = set(g.lower() for g in tmdb_details.get("genres", []))
+
+    def compute_final_ranking(m: dict) -> float:
+        base_sim = float(m.get("similarity") or 0.0)
+        score = base_sim * 0.45
+
+        cand_orig = (m.get("original_language") or "").lower()
+        cand_lang = (m.get("language") or "").lower()
+        spoken = [str(s).lower() for s in m.get("spoken_languages", [])]
+
+        is_cand_tamil = cand_orig == "ta" or cand_lang == "tamil" or "ta" in spoken or "tamil" in spoken
+        is_cand_indian = is_cand_tamil or cand_orig in {"te", "hi", "ml", "kn"} or cand_lang in {"telugu", "hindi", "malayalam", "kannada"}
+        is_same_lang = (
+            (t_orig and cand_orig == t_orig) or
+            (t_lang and cand_lang == t_lang) or
+            (is_target_tamil and is_cand_tamil)
+        )
+
+        m["language_match"] = is_same_lang
+
+        # 1. Language Prioritization
+        if is_target_tamil:
+            if is_cand_tamil:
+                score += 0.55  # Significant priority for Tamil movies
+            elif is_cand_indian:
+                score += 0.18  # Regional Indian neighbor
+            else:
+                score -= 0.15  # Deprioritize unrelated Western films
+        elif is_same_lang:
+            score += 0.50
+        elif is_target_indian and is_cand_indian:
+            score += 0.18
+
+        # 2. Director synergy
+        c_dir = str(m.get("director", "")).strip().lower()
+        if t_dir and c_dir and t_dir not in {"unknown director", "nan", "various"} and t_dir == c_dir:
+            score += 0.20
+
+        # 3. Genre overlap
+        c_genres = set((g if isinstance(g, str) else g.get("name", "")).lower() for g in m.get("genres", []))
+        if t_genres and c_genres:
+            overlap = len(t_genres.intersection(c_genres)) / len(t_genres.union(c_genres))
+            score += overlap * 0.15
+
+        # 4. Rating quality tie-breaker
+        rating = float(m.get("rating", 0.0) or 0.0)
+        score += (rating / 10.0) * 0.04
+
+        return score
+
+    enriched_candidates.sort(key=compute_final_ranking, reverse=True)
+
+    # 4. Strict Self-Exclusion & Deduplication
     clean_target_norm = recommender.normalize_text(target_movie_title)
-    safe_recommendations = []
+    final_recommendations: List[dict] = []
+    seen_tmdb_ids = {str(movie_id)}
+    if target_tmdb_id:
+        seen_tmdb_ids.add(str(target_tmdb_id))
     seen_titles = {clean_target_norm} if clean_target_norm else set()
-    seen_ids = {str(movie_id)}
 
-    for rec in raw_recommendations:
-        rec_id_str = str(rec.get("id") or rec.get("movie_id"))
-        rec_norm = recommender.normalize_text(rec.get("title", ""))
+    for m in enriched_candidates:
+        m_tmdb_id = str(m.get("tmdb_id") or m.get("id") or "")
+        m_norm = recommender.normalize_text(m.get("title", ""))
+        m_year = m.get("year", 0)
+        t_key = f"{m_norm}_{m_year}"
 
-        if rec_norm in seen_titles or rec_id_str in seen_ids:
+        # Never recommend target movie itself
+        if (m_tmdb_id and m_tmdb_id in seen_tmdb_ids) or m_norm in seen_titles or t_key in seen_titles:
             continue
 
-        seen_titles.add(rec_norm)
-        seen_ids.add(rec_id_str)
-        safe_recommendations.append(rec)
-        if len(safe_recommendations) >= limit:
+        if m_tmdb_id:
+            seen_tmdb_ids.add(m_tmdb_id)
+        seen_titles.add(m_norm)
+        seen_titles.add(t_key)
+
+        # Ensure similarity is null if not computed by ML model
+        if is_tmdb_fallback and "similarity" not in m:
+            m["similarity"] = None
+
+        final_recommendations.append(m)
+        if len(final_recommendations) >= limit:
             break
 
-    # Enrich recommendations with TMDB metadata
-    return tmdb_service.enrich_movies_batch(safe_recommendations)
+    _recommendations_cache[cache_key] = (now, final_recommendations)
+    return final_recommendations
 
 
 @app.get("/api/search", response_model=List[Movie], tags=["Search"])
@@ -267,6 +389,13 @@ def search_movies(
     if not q_str:
         return get_trending(limit=lim)
 
+    cache_key = f"search_{q_str.lower()}_{lim}"
+    now = time.time()
+    if cache_key in _search_endpoint_cache:
+        ts, cached = _search_endpoint_cache[cache_key]
+        if now - ts < CACHE_TTL:
+            return cached
+
     # 1. Run local smart fuzzy search on ML dataset
     local_results = recommender.search_movies(q_str, limit=lim)
 
@@ -277,7 +406,9 @@ def search_movies(
 
     # If no TMDB configured, return enriched local results
     if not tmdb_results:
-        return tmdb_service.enrich_movies_batch(local_results)
+        res = tmdb_service.enrich_movies_batch(local_results)
+        _search_endpoint_cache[cache_key] = (now, res)
+        return res
 
     # 3. Merge and rank results according to search priority
     q_norm = recommender.normalize_text(q_str)
@@ -301,33 +432,46 @@ def search_movies(
         elif ratio >= 0.70:
             score += 250.0 * ratio
 
-        # Popularity / Rating small tie-breaker
-        score += float(m.get("rating", 0.0) or 0.0) * 0.5
-        score += float(m.get("popularity", 0.0) or 0.0) * 0.05
+        # Popularity & Vote count ranking
+        score += float(m.get("rating", 0.0) or 0.0) * 2.0
+        votes = float(m.get("votes", 0) or m.get("vote_count", 0) or 0)
+        score += min(votes * 0.5, 300.0)
+        pop = float(m.get("popularity", 0.0) or 0.0)
+        score += min(pop * 5.0, 400.0)
         return score
 
-    # Combine candidates from both local dataset and TMDB
-    # Enrich top local results so they have proper posters/backdrops
-    enriched_local = tmdb_service.enrich_movies_batch(local_results[:15])
-    all_candidates = enriched_local + tmdb_results
+    # Combine candidates from both TMDB live search and local dataset
+    all_candidates = tmdb_results + [dict(m) for m in local_results[:10]]
 
     # Sort all candidates by relevance score
     all_candidates.sort(key=get_match_score, reverse=True)
 
     for movie in all_candidates:
         m_title_norm = recommender.normalize_text(movie.get("title", ""))
-        m_id_str = str(movie.get("id") or movie.get("tmdb_id") or movie.get("movie_id"))
+        m_year = movie.get("year", 0)
+        t_key = f"{m_title_norm}_{m_year}"
 
-        if m_title_norm in seen_titles or m_id_str in seen_ids:
+        cand_ids = []
+        if movie.get("tmdb_id"):
+            cand_ids.append(str(movie["tmdb_id"]))
+        if movie.get("id"):
+            cand_ids.append(str(movie["id"]))
+        if movie.get("movie_id"):
+            cand_ids.append(str(movie["movie_id"]))
+
+        # If any ID or year-title combination already seen, skip duplicate
+        if (cand_ids and any(cid in seen_ids for cid in cand_ids)) or t_key in seen_titles:
             continue
 
-        seen_titles.add(m_title_norm)
-        seen_ids.add(m_id_str)
+        for cid in cand_ids:
+            seen_ids.add(cid)
+        seen_titles.add(t_key)
         merged_results.append(movie)
 
         if len(merged_results) >= lim:
             break
 
+    _search_endpoint_cache[cache_key] = (now, merged_results)
     return merged_results
 
 

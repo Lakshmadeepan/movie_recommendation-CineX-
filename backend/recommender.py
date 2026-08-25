@@ -314,44 +314,92 @@ class MovieRecommender:
     # MOVIE SEARCH / LOOKUP (SMART FUZZY MATCHING)
     # ========================================================
 
-    def find_movie(self, movie_title: str, min_similarity: float = 0.70) -> Optional[int]:
+    def find_movie(
+        self,
+        movie_title: str,
+        min_similarity: float = 0.85,
+        language: Optional[str] = None,
+        year: Optional[int] = None
+    ) -> Optional[int]:
         """
-        Finds row index for a given movie title string with fuzzy spelling tolerance.
+        Intelligent Title Matching with Multi-Token & Spelling Resolution:
         Priority:
-        1. Exact normalized title match
-        2. Starts-with match
-        3. Substring / words match
-        4. High-confidence fuzzy spelling match (e.g. 'vada chenai' -> 'Vada Chennai', 'vikramm' -> 'Vikram')
+        1. Exact normalized title match with matching language/year (if provided)
+        2. Exact normalized title match
+        3. Strict token match (word by word)
+        4. High-confidence fuzzy spelling match without sequel mismatch
         """
         query = self.normalize_text(movie_title)
         if not query:
             return None
 
-        # 1. Exact normalized title match
+        q_tokens = query.split()
+        q_has_number = any(t.isdigit() or t in {"2", "3", "4", "5", "ii", "iii", "iv"} for t in q_tokens)
+        req_lang = language.strip().lower() if language else None
+
+        # 1. Exact normalized title match with matching language/year (Highest Priority)
         for idx, m in enumerate(self.movies):
             t_norm = self.normalize_text(m.get("title", ""))
             raw_norm = self.normalize_text(m.get("raw_title", ""))
             if t_norm == query or raw_norm == query:
-                return idx
+                m_lang = str(m.get("language", "")).strip().lower()
+                m_year = m.get("year", 0)
+                if req_lang:
+                    if m_lang == req_lang:
+                        if year and m_year and abs(m_year - year) <= 1:
+                            return idx
+                        return idx
+                else:
+                    return idx
 
-        # 2. Starts-with match
-        for idx, m in enumerate(self.movies):
-            t_norm = self.normalize_text(m.get("title", ""))
-            if t_norm.startswith(query):
-                return idx
-
-        # 3. Substring / contains match
-        for idx, m in enumerate(self.movies):
-            t_norm = self.normalize_text(m.get("title", ""))
-            if len(query) >= 4 and (query in t_norm or t_norm in query):
-                return idx
-
-        # 4. Words match (all query words present in title)
-        q_words = query.split()
-        if len(q_words) > 1:
+        # 1b. If no language was requested, allow exact title match
+        if not req_lang:
             for idx, m in enumerate(self.movies):
                 t_norm = self.normalize_text(m.get("title", ""))
-                if all(w in t_norm for w in q_words):
+                raw_norm = self.normalize_text(m.get("raw_title", ""))
+                if t_norm == query or raw_norm == query:
+                    return idx
+
+        # 2. Strict Token Equality (Tokens match exactly in order)
+        for idx, m in enumerate(self.movies):
+            t_norm = self.normalize_text(m.get("title", ""))
+            t_tokens = t_norm.split()
+            if t_tokens == q_tokens:
+                m_lang = str(m.get("language", "")).strip().lower()
+                if req_lang:
+                    if m_lang == req_lang:
+                        return idx
+                else:
+                    return idx
+
+        # 3. Starts-with match ONLY if sequel alignment holds
+        for idx, m in enumerate(self.movies):
+            t_norm = self.normalize_text(m.get("title", ""))
+            t_tokens = t_norm.split()
+            t_has_number = any(t.isdigit() or t in {"2", "3", "4", "5", "ii", "iii", "iv"} for t in t_tokens)
+
+            # If query has no number (e.g. 'Singam') and candidate has number ('Singam 2'), do NOT match here
+            if not q_has_number and t_has_number:
+                continue
+
+            if t_norm.startswith(query) and len(t_tokens) == len(q_tokens):
+                m_lang = str(m.get("language", "")).strip().lower()
+                if req_lang and m_lang != req_lang:
+                    continue
+                return idx
+
+        # 4. Words match (all query words present and token count matches or is minimal)
+        if len(q_tokens) > 1:
+            for idx, m in enumerate(self.movies):
+                t_norm = self.normalize_text(m.get("title", ""))
+                t_tokens = t_norm.split()
+                t_has_number = any(t.isdigit() or t in {"2", "3", "4", "5", "ii", "iii", "iv"} for t in t_tokens)
+                if not q_has_number and t_has_number:
+                    continue
+                if all(w in t_tokens for w in q_tokens) and abs(len(t_tokens) - len(q_tokens)) <= 1:
+                    m_lang = str(m.get("language", "")).strip().lower()
+                    if req_lang and m_lang != req_lang:
+                        continue
                     return idx
 
         # 5. Fuzzy spelling similarity match
@@ -361,6 +409,15 @@ class MovieRecommender:
         for idx, m in enumerate(self.movies):
             t_norm = self.normalize_text(m.get("title", ""))
             if not t_norm:
+                continue
+
+            m_lang = str(m.get("language", "")).strip().lower()
+            if req_lang and m_lang != req_lang:
+                continue
+
+            t_tokens = t_norm.split()
+            t_has_number = any(t.isdigit() or t in {"2", "3", "4", "5", "ii", "iii", "iv"} for t in t_tokens)
+            if not q_has_number and t_has_number:
                 continue
 
             ratio = self.calculate_similarity_ratio(query, t_norm)
@@ -383,18 +440,31 @@ class MovieRecommender:
         distances: np.ndarray,
         indices: np.ndarray,
         top_n: int = 10,
-        min_threshold: float = 0.08
+        min_threshold: float = 0.03
     ) -> List[Dict[str, Any]]:
         """
         Ranks and filters KNN candidates with:
         - True cosine similarity from TF-IDF representation
+        - Dynamic language adaptation (Tamil -> prioritize Tamil, English -> English, Telugu -> Telugu, Hindi -> Hindi)
         - Subtle director & cast affinity synergy
+        - Genre overlap scoring
         - Minimum quality/similarity threshold
-        - Strict self-exclusion
+        - Strict self-exclusion & candidate-level deduplication
         """
         target_norm_title = self.normalize_text(target_movie.get("title", ""))
         target_id_str = str(target_movie.get("id") or target_movie.get("movie_id") or "")
         target_dir = str(target_movie.get("director", "")).strip().lower()
+        target_lang = str(target_movie.get("language", "")).strip().lower()
+        target_orig_lang = str(target_movie.get("original_language", "")).strip().lower()
+        if not target_orig_lang and target_lang:
+            lang_to_code = {"tamil": "ta", "telugu": "te", "malayalam": "ml", "hindi": "hi", "kannada": "kn", "english": "en"}
+            target_orig_lang = lang_to_code.get(target_lang, "")
+
+        is_target_tamil = target_orig_lang == "ta" or target_lang == "tamil"
+        is_target_telugu = target_orig_lang == "te" or target_lang == "telugu"
+        is_target_hindi = target_orig_lang == "hi" or target_lang == "hindi"
+        is_target_indian = is_target_tamil or is_target_telugu or is_target_hindi or target_orig_lang in {"ml", "kn"} or target_lang in {"malayalam", "kannada"}
+
         target_genres = set(
             (g if isinstance(g, str) else g.get("name", "")).lower()
             for g in target_movie.get("genres", [])
@@ -422,7 +492,7 @@ class MovieRecommender:
             cand_id_str = str(candidate.get("id"))
             cand_norm_title = self.normalize_text(candidate["title"])
 
-            # Never recommend target movie itself or duplicates
+            # Never recommend target movie itself or duplicate local titles
             if cand_norm_title in seen_titles or (cand_id_str and cand_id_str in seen_ids):
                 continue
 
@@ -431,14 +501,42 @@ class MovieRecommender:
                 seen_ids.add(cand_id_str)
 
             base_sim = float(max(0.0, 1.0 - dist))
-            score = base_sim
+            
+            # Base ranking score
+            ranking_score = base_sim * 0.45
 
-            # 1. Director affinity (same director = strong stylistic and cinematic synergy)
+            cand_lang = str(candidate.get("language", "")).strip().lower()
+            cand_orig_lang = str(candidate.get("original_language", "")).strip().lower()
+            if not cand_orig_lang and cand_lang:
+                lang_to_code = {"tamil": "ta", "telugu": "te", "malayalam": "ml", "hindi": "hi", "kannada": "kn", "english": "en"}
+                cand_orig_lang = lang_to_code.get(cand_lang, "")
+
+            is_cand_tamil = cand_orig_lang == "ta" or cand_lang == "tamil"
+            is_cand_indian = is_cand_tamil or cand_orig_lang in {"te", "hi", "ml", "kn"} or cand_lang in {"telugu", "hindi", "malayalam", "kannada"}
+            is_same_lang = (
+                (target_orig_lang and cand_orig_lang == target_orig_lang) or
+                (target_lang and cand_lang == target_lang)
+            )
+
+            # 1. Dynamic Language Prioritization & Match Bonus
+            if is_target_tamil:
+                if is_cand_tamil:
+                    ranking_score += 0.50
+                elif is_cand_indian:
+                    ranking_score += 0.18
+            elif is_same_lang:
+                ranking_score += 0.45
+            elif is_target_indian and is_cand_indian:
+                ranking_score += 0.18
+
+            # 2. Director affinity (same director = strong stylistic and cinematic synergy)
             cand_dir = str(candidate.get("director", "")).strip().lower()
-            if cand_dir and target_dir and cand_dir != "unknown director" and cand_dir != "nan" and cand_dir == target_dir:
-                score += 0.08
+            director_bonus = 0.0
+            if cand_dir and target_dir and cand_dir not in {"unknown director", "nan", "various"} and cand_dir == target_dir:
+                director_bonus = 0.10
+                ranking_score += 0.15
 
-            # 2. Cast collaboration affinity
+            # 3. Cast collaboration affinity
             raw_c_cast = candidate.get("cast", [])
             if isinstance(raw_c_cast, list):
                 cand_cast = set(
@@ -451,16 +549,25 @@ class MovieRecommender:
                 cand_cast = set()
 
             shared_actors = target_cast.intersection(cand_cast)
-            if shared_actors:
-                score += min(len(shared_actors) * 0.04, 0.08)
+            cast_bonus = min(len(shared_actors) * 0.04, 0.08) if shared_actors else 0.0
+            ranking_score += cast_bonus
 
-            # 3. Filter out weak/generic recommendations below relevance threshold
-            if score >= min_threshold:
-                rec_dict = dict(candidate)
-                rec_dict["similarity"] = round(score, 4)
-                scored_candidates.append(rec_dict)
+            # 4. Genre Jaccard overlap bonus
+            cand_genres = set((g if isinstance(g, str) else g.get("name", "")).lower() for g in candidate.get("genres", []))
+            if target_genres and cand_genres:
+                genre_overlap = len(target_genres.intersection(cand_genres)) / len(target_genres.union(cand_genres))
+                ranking_score += genre_overlap * 0.15
 
-        scored_candidates.sort(key=lambda x: x["similarity"], reverse=True)
+            # Store clean bounded ML similarity for UI display
+            rec_dict = dict(candidate)
+            rec_dict["similarity"] = round(min(1.0, max(0.0, base_sim + director_bonus + cast_bonus)), 4)
+            rec_dict["ranking_score"] = ranking_score
+            rec_dict["language_match"] = is_same_lang
+            if is_cand_tamil:
+                rec_dict["original_language"] = "ta"
+            scored_candidates.append(rec_dict)
+
+        scored_candidates.sort(key=lambda x: x.get("ranking_score", 0.0), reverse=True)
         return scored_candidates[:top_n]
 
     def get_recommendations(

@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://cinex-movie-ai.netlify.app/sitemap.xml
